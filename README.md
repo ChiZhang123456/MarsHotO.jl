@@ -36,10 +36,10 @@ MarsHotO samples the Rahmati fit to the Kharchenko et al. (2000) O-O differentia
 
 The total hot O production rate is
 
-$$
+```math
 Q_{\mathrm{hot\,O}}
 =2n_en_{\mathrm{O_2^+}}k(T_e).
-$$
+```
 
 The four reaction channels use the following total released energies and branching ratios:
 

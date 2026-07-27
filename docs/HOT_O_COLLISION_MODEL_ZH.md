@@ -30,33 +30,33 @@ MarsHotO 使用 Monte Carlo 方法逐个追踪热 O：
 
 入射粒子是热 O，记为粒子 1：
 
-$$
+```math
 m_1=m_{\mathrm O},
 \qquad
 \mathbf v_1=\text{碰撞前热 O 的 LAB 速度}.
-$$
+```
 
 目标粒子是背景中性成分，记为粒子 2：
 
-$$
+```math
 m_2=m_s,
 \qquad
 \mathbf v_2=\text{碰撞前目标粒子的 LAB 速度}.
-$$
+```
 
 Ali Rahmati 的解析能量损失公式假设目标粒子静止：
 
-$$
+```math
 \mathbf v_2=0.
-$$
+```
 
 MarsHotO 的完整碰撞运动学允许 $\mathbf v_2\ne0$。代码根据 MGITM 中性温度 $T_n$ 抽取目标粒子的 Maxwell 速度：
 
-$$
+```math
 v_{2x},v_{2y},v_{2z}
 \sim
 \mathcal N\left(0,\frac{k_{\mathrm B}T_n}{m_2}\right).
-$$
+```
 
 ## 3. LAB 和 COM 坐标系
 
@@ -68,44 +68,44 @@ LAB 是火星大气所在的参考系。MGITM 密度和温度、火星重力、�
 
 COM 是质心坐标系。质心速度为：
 
-$$
+```math
 \boxed{
 \mathbf V_{\mathrm{COM}}
 =
 \frac{m_1\mathbf v_1+m_2\mathbf v_2}{m_1+m_2}
 }
-$$
+```
 
 定义碰撞前相对速度：
 
-$$
+```math
 \boxed{
 \mathbf g=\mathbf v_1-\mathbf v_2
 }
-$$
+```
 
 两个粒子在 COM 中的速度为：
 
-$$
+```math
 \mathbf v_{1,\mathrm{COM}}
 =
 \frac{m_2}{m_1+m_2}\mathbf g,
-$$
+```
 
-$$
+```math
 \mathbf v_{2,\mathrm{COM}}
 =
 -\frac{m_1}{m_1+m_2}\mathbf g.
-$$
+```
 
 因此：
 
-$$
+```math
 m_1\mathbf v_{1,\mathrm{COM}}
 +
 m_2\mathbf v_{2,\mathrm{COM}}
 =0.
-$$
+```
 
 也就是说，在 COM 中两个粒子的动量大小相等、方向相反。这使弹性碰撞可以简化为对相对速度方向的一次旋转。
 
@@ -115,20 +115,20 @@ $$
 
 对背景成分 $s$，Ali 使用：
 
-$$
+```math
 \boxed{
 \sigma_s(E)
 =
 \sigma_s(3\,\mathrm{eV})
 \left(\frac{E}{3\,\mathrm{eV}}\right)^{-0.2}
 }
-$$
+```
 
 当前代码使用热 O 的 LAB 动能：
 
-$$
+```math
 E=\frac{1}{2}m_{\mathrm O}|\mathbf v_1|^2.
-$$
+```
 
 如果目标静止，这就是相对碰撞能量。当前代码会为目标抽取热速度，但是计算总截面时仍采用热 O 的 LAB 动能。这与 Ali 的目标静止近似一致，是当前模型的一项明确近似。
 
@@ -136,43 +136,43 @@ $$
 
 MGITM 给出位置 $\mathbf r$ 处各背景成分的密度 $n_s(\mathbf r)$。考虑最小散射角后，局地总碰撞系数为：
 
-$$
+```math
 \boxed{
 \kappa(\mathbf r,E)
 =
 \sum_s n_s(\mathbf r)\sigma_s(E)f_\sigma
 }
-$$
+```
 
 $\kappa$ 的单位是 $\mathrm{m^{-1}}$。如果局地状态不变，平均自由程为：
 
-$$
+```math
 \lambda=\frac{1}{\kappa}.
-$$
+```
 
 ### 4.3 光学深度抽样
 
 模型先产生均匀随机数 $u$，然后抽取下一次碰撞所需的光学深度：
 
-$$
+```math
 \boxed{
 \tau_*=-\ln u,
 \qquad
 u\sim U(0,1)
 }
-$$
+```
 
 粒子每前进一段 $\Delta s$，累计：
 
-$$
+```math
 \tau\leftarrow\tau+\kappa\Delta s.
-$$
+```
 
 当：
 
-$$
+```math
 \tau\ge\tau_*
-$$
+```
 
 时，在当前位置执行碰撞。这个方法可以自然处理大气密度和碰撞截面沿轨迹变化的情况。
 
@@ -180,19 +180,19 @@ $$
 
 如果当前位置已经确定发生碰撞，目标成分 $s$ 的权重为：
 
-$$
+```math
 w_s=n_s\sigma_s(E)f_\sigma.
-$$
+```
 
 目标成分的条件概率为：
 
-$$
+```math
 \boxed{
 P(s\mid\mathrm{collision})
 =
 \frac{w_s}{\sum_j w_j}
 }
-$$
+```
 
 因此，目标选择同时取决于局地密度和碰撞截面。CO₂ 的截面较大并不意味着每次都与 CO₂ 碰撞。如果当前位置 O 密度远高于 CO₂，O 仍可能是最常被选中的目标。
 
@@ -200,23 +200,23 @@ $$
 
 Ali 使用 Kharchenko et al. (2000) 的 O 与 O 微分截面拟合：
 
-$$
+```math
 \boxed{
 \frac{d\sigma}{d\Omega}
 =
 \alpha
 \sin^\beta\left(\frac{\theta}{2}\right)
 }
-$$
+```
 
 其中：
 
-$$
+```math
 \alpha=0.36\times10^{-16}
 \ \mathrm{cm^2\,sr^{-1}},
 \qquad
 \beta=-1.85.
-$$
+```
 
 $\theta$ 是 COM 散射角。它不是热 O 最终在 LAB 中转过的角度。
 
@@ -224,23 +224,23 @@ $\theta$ 是 COM 散射角。它不是热 O 最终在 LAB 中转过的角度。
 
 球坐标的立体角元为：
 
-$$
+```math
 d\Omega=\sin\theta\,d\theta\,d\phi.
-$$
+```
 
 对方位角积分后：
 
-$$
+```math
 d\Omega=2\pi\sin\theta\,d\theta.
-$$
+```
 
 所以散射角的概率必须满足：
 
-$$
+```math
 p(\theta)
 \propto
 \frac{d\sigma}{d\Omega}\sin\theta.
-$$
+```
 
 $\sin\theta$ 是立体角 Jacobian。如果漏掉这一项，得到的角度分布会错误。
 
@@ -248,13 +248,13 @@ $\sin\theta$ 是立体角 Jacobian。如果漏掉这一项，得到的角度分�
 
 在：
 
-$$
+```math
 \theta_{\min}\le\theta\le\pi
-$$
+```
 
 范围内，归一化概率密度为：
 
-$$
+```math
 \boxed{
 p(\theta)
 =
@@ -268,80 +268,80 @@ p(\theta)
 \right]
 }
 }
-$$
+```
 
 它满足：
 
-$$
+```math
 \int_{\theta_{\min}}^\pi p(\theta)\,d\theta=1.
-$$
+```
 
 ### 6.3 反 CDF 抽样
 
 令：
 
-$$
+```math
 q=\beta+2=0.15.
-$$
+```
 
 首先抽取：
 
-$$
+```math
 u_\theta\sim U(0,1).
-$$
+```
 
 然后计算：
 
-$$
+```math
 A=\sin^q\left(\frac{\theta_{\min}}{2}\right),
-$$
+```
 
-$$
+```math
 x=A+u_\theta(1-A),
-$$
+```
 
-$$
+```math
 \boxed{
 \theta
 =
 2\arcsin\left(x^{1/q}\right)
 }
-$$
+```
 
 方位角没有优先方向，因此：
 
-$$
+```math
 \boxed{
 \phi=2\pi u_\phi,
 \qquad
 u_\phi\sim U(0,1)
 }
-$$
+```
 
 ## 7. 10°截断及其物理含义
 
 微分截面在小角度处很大，因此会产生大量几乎不改变方向和能量的碰撞。Ali 指出，小于约 $10^\circ$ 的碰撞对总体热 O 通量和逃逸率影响较小。MarsHotO 当前默认：
 
-$$
+```math
 \theta_{\min}=10^\circ.
-$$
+```
 
 截断散射角时，总碰撞截面也必须按相同比例减小。保留下来的角积分比例为：
 
-$$
+```math
 \boxed{
 f_\sigma(\theta_{\min})
 =
 1-\sin^{\beta+2}
 \left(\frac{\theta_{\min}}{2}\right)
 }
-$$
+```
 
 当 $\theta_{\min}=10^\circ$ 时：
 
-$$
+```math
 f_\sigma\approx0.307.
-$$
+```
 
 也就是说，采用 Ali 拟合函数时，$10^\circ$ 以上的碰撞约占拟合总截面的 30.7%。代码对碰撞频率和角度抽样使用同一个 $\theta_{\min}$，保证两部分一致。
 
@@ -351,15 +351,15 @@ $$
 
 沿碰撞前相对速度定义：
 
-$$
+```math
 \mathbf e_0=\frac{\mathbf g}{|\mathbf g|}.
-$$
+```
 
 再构造两个与 $\mathbf e_0$ 垂直并且彼此垂直的单位向量：
 
-$$
+```math
 \mathbf e_1,\qquad\mathbf e_2.
-$$
+```
 
 $(\mathbf e_0,\mathbf e_1,\mathbf e_2)$ 构成局地正交基。
 
@@ -367,13 +367,13 @@ $(\mathbf e_0,\mathbf e_1,\mathbf e_2)$ 构成局地正交基。
 
 弹性碰撞不改变 COM 相对速度的大小：
 
-$$
+```math
 |\mathbf g'|=|\mathbf g|.
-$$
+```
 
 抽到 $\theta$ 和 $\phi$ 后：
 
-$$
+```math
 \boxed{
 \mathbf g'
 =
@@ -389,29 +389,29 @@ $$
 \right)
 \right]
 }
-$$
+```
 
 可以把它理解为，把原本沿 $\mathbf e_0$ 的相对速度箭头转过 $\theta$，再用 $\phi$ 决定绕原方向转到哪个方位。
 
 ### 8.3 计算碰撞后的 COM 速度
 
-$$
+```math
 \mathbf v'_{1,\mathrm{COM}}
 =
 \frac{m_2}{m_1+m_2}\mathbf g',
-$$
+```
 
-$$
+```math
 \mathbf v'_{2,\mathrm{COM}}
 =
 -\frac{m_1}{m_1+m_2}\mathbf g'.
-$$
+```
 
 ### 8.4 转换回 LAB
 
 给两个 COM 速度重新加上质心速度：
 
-$$
+```math
 \boxed{
 \mathbf v'_1
 =
@@ -419,9 +419,9 @@ $$
 +
 \frac{m_2}{m_1+m_2}\mathbf g'
 }
-$$
+```
 
-$$
+```math
 \boxed{
 \mathbf v'_2
 =
@@ -429,7 +429,7 @@ $$
 -
 \frac{m_1}{m_1+m_2}\mathbf g'
 }
-$$
+```
 
 $\mathbf v'_1$ 是热 O 碰撞后的 LAB 速度。$\mathbf v'_2$ 是目标粒子碰撞后的 LAB 速度。
 
@@ -441,19 +441,19 @@ $\mathbf v'_1$ 是热 O 碰撞后的 LAB 速度。$\mathbf v'_2$ 是目标粒子
 
 把碰撞后的 LAB 速度代入总动量：
 
-$$
+```math
 m_1\mathbf v'_1+m_2\mathbf v'_2.
-$$
+```
 
 与 $\mathbf g'$ 有关的两项会互相抵消，因此：
 
-$$
+```math
 m_1\mathbf v'_1+m_2\mathbf v'_2
 =
 (m_1+m_2)\mathbf V_{\mathrm{COM}}
 =
 m_1\mathbf v_1+m_2\mathbf v_2.
-$$
+```
 
 所以线性动量严格守恒。
 
@@ -461,17 +461,17 @@ $$
 
 COM 中的相对动能为：
 
-$$
+```math
 E_{\mathrm{COM}}
 =
 \frac{1}{2}\mu|\mathbf g|^2,
-$$
+```
 
 其中约化质量为：
 
-$$
+```math
 \mu=\frac{m_1m_2}{m_1+m_2}.
-$$
+```
 
 碰撞只旋转 $\mathbf g$，不改变它的大小，所以 COM 动能不变。质心速度也不变，因此 LAB 中两个粒子的总动能严格守恒。
 
@@ -481,20 +481,20 @@ $$
 
 当目标粒子在 LAB 中初始静止时：
 
-$$
+```math
 \boxed{
 \frac{\Delta E}{E}
 =
 \frac{2m_1m_2}{(m_1+m_2)^2}
 (1-\cos\theta)
 }
-$$
+```
 
 其中：
 
-$$
+```math
 \Delta E=E_1-E'_1.
-$$
+```
 
 这个公式说明，能量损失由质量比和 COM 散射角共同决定。
 
@@ -502,15 +502,15 @@ $$
 
 当 $\theta$ 很小时：
 
-$$
+```math
 1-\cos\theta\approx\frac{\theta^2}{2}.
-$$
+```
 
 所以：
 
-$$
+```math
 \frac{\Delta E}{E}\propto\theta^2.
-$$
+```
 
 这解释了为什么小角度前向散射的数量很多，但是单次能量传递很小。
 
@@ -518,23 +518,23 @@ $$
 
 当 $\theta=180^\circ$ 时：
 
-$$
+```math
 \left(\frac{\Delta E}{E}\right)_{\max}
 =
 \frac{4m_1m_2}{(m_1+m_2)^2}.
-$$
+```
 
 如果两个粒子质量相等：
 
-$$
+```math
 m_1=m_2,
-$$
+```
 
 则：
 
-$$
+```math
 \left(\frac{\Delta E}{E}\right)_{\max}=1.
-$$
+```
 
 这表示热 O 与静止 O 发生完全后向的等质量碰撞时，入射 O 可以把全部动能传递给目标 O。
 
@@ -542,59 +542,59 @@ $$
 
 假设热 O 与静止 CO₂ 碰撞：
 
-$$
+```math
 m_1=16\ \mathrm{amu},
 \qquad
 m_2=44\ \mathrm{amu}.
-$$
+```
 
 假设抽到的 COM 散射角为：
 
-$$
+```math
 \theta=60^\circ.
-$$
+```
 
 质量因子为：
 
-$$
+```math
 \frac{2m_1m_2}{(m_1+m_2)^2}
 =
 \frac{2\times16\times44}{(16+44)^2}
 \approx0.3911.
-$$
+```
 
 又因为：
 
-$$
+```math
 1-\cos60^\circ=0.5,
-$$
+```
 
 所以：
 
-$$
+```math
 \frac{\Delta E}{E}
 \approx0.3911\times0.5
 \approx0.1956.
-$$
+```
 
 如果碰撞前热 O 的能量为 3 eV：
 
-$$
+```math
 \Delta E\approx0.587\ \mathrm{eV},
-$$
+```
 
-$$
+```math
 E'\approx2.413\ \mathrm{eV}.
-$$
+```
 
 作为对比，如果目标是 O，则 $m_1=m_2=16\ \mathrm{amu}$。在相同的 $60^\circ$ COM 散射角下：
 
-$$
+```math
 \frac{\Delta E}{E}
 =
 \frac{1}{2}(1-\cos60^\circ)
 =0.25.
-$$
+```
 
 等质量碰撞的能量传递更有效。代码为目标抽取热速度后，最终结果会在静止目标解析结果附近产生小幅变化。
 
