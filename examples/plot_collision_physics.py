@@ -27,7 +27,6 @@ TARGETS = {
     "CO": (28.0, 1.8e-14),
     r"N$_2$": (28.0, 1.8e-14),
     r"O$_2$": (32.0, 1.8e-14),
-    "Ar": (40.0, 1.2e-14),
     r"CO$_2$": (44.0, 2.0e-14),
 }
 
@@ -36,7 +35,6 @@ COLORS = {
     "CO": "#9C755F",
     r"N$_2$": "#59A14F",
     r"O$_2$": "#F28E2B",
-    "Ar": "#B07AA1",
     r"CO$_2$": "#E15759",
 }
 
@@ -133,13 +131,11 @@ def make_figure() -> plt.Figure:
     cross_section_groups = {
         "O": TARGETS["O"],
         r"CO, N$_2$, O$_2$": TARGETS["CO"],
-        "Ar": TARGETS["Ar"],
         r"CO$_2$": TARGETS[r"CO$_2$"],
     }
     cross_section_colors = {
         "O": COLORS["O"],
         r"CO, N$_2$, O$_2$": COLORS[r"O$_2$"],
-        "Ar": COLORS["Ar"],
         r"CO$_2$": COLORS[r"CO$_2$"],
     }
     for species, (_, sigma_3ev_cm2) in cross_section_groups.items():
@@ -199,14 +195,12 @@ def make_figure() -> plt.Figure:
         "O": TARGETS["O"][0],
         r"CO, N$_2$": TARGETS["CO"][0],
         r"O$_2$": TARGETS[r"O$_2$"][0],
-        "Ar": TARGETS["Ar"][0],
         r"CO$_2$": TARGETS[r"CO$_2$"][0],
     }
     energy_loss_colors = {
         "O": COLORS["O"],
         r"CO, N$_2$": COLORS["CO"],
         r"O$_2$": COLORS[r"O$_2$"],
-        "Ar": COLORS["Ar"],
         r"CO$_2$": COLORS[r"CO$_2$"],
     }
     for species, mass_amu in energy_loss_groups.items():

@@ -22,11 +22,6 @@ mass_amu = 32.0
 sigma_3eV_cm2 = 1.8e-14
 
 [[target]]
-species = "Ar"
-mass_amu = 40.0
-sigma_3eV_cm2 = 1.2e-14
-
-[[target]]
 species = "CO2"
 mass_amu = 44.0
 sigma_3eV_cm2 = 2.0e-14

@@ -40,7 +40,6 @@ MarsHotO 当前在 `data/cross_sections/rahmati_total_cross_sections.toml` 中�
 | CO | $1.8\times10^{-14}$ | 是 |
 | N₂ | $1.8\times10^{-14}$ | 是 |
 | O₂ | $1.8\times10^{-14}$ | 是 |
-| Ar | $1.2\times10^{-14}$ | 否 |
 | CO₂ | $2.0\times10^{-14}$ | 是 |
 
 单位换算为
@@ -62,15 +61,7 @@ Lillis 等人列出的参考值为 O 撞击 CO₂、O、N₂ 和 CO 时分别采
 
 ## 3. MGITM 中实际有哪些中性成分
 
-当前放入项目的 MGITM 文件包含 CO₂、O、N₂、CO 和 O₂。它不包含 Ar。
-
-因此，即使截面配置中保留了 Ar，只要 $n_{\mathrm{Ar}}(z)=0$，Ar 对总碰撞系数的贡献就是零：
-
-```math
-n_{\mathrm{Ar}}(z)\sigma_{\mathrm{Ar}}(E)=0.
-```
-
-Ar 不会被 Monte Carlo 模型抽中。保留 Ar 配置的意义是以后可以使用包含 Ar 密度的其他大气输入，而不是假设当前 MGITM 已经提供 Ar。
+当前放入项目的 MGITM 文件和碰撞配置均使用 CO₂、O、N₂、CO 和 O₂，不包含其他中性成分。
 
 ## 4. 如何决定这一步是否碰撞
 
