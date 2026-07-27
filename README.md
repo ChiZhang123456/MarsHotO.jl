@@ -36,10 +36,10 @@ MarsHotO samples the Rahmati fit to the Kharchenko et al. (2000) O-O differentia
 
 The total hot O production rate is
 
-\[
+$$
 Q_{\mathrm{hot\,O}}
 =2n_en_{\mathrm{O_2^+}}k(T_e).
-\]
+$$
 
 The four reaction channels use the following total released energies and branching ratios:
 
@@ -85,13 +85,13 @@ Calculates and plots:
 
 The calculation currently includes:
 
-1. Maxwellian electron velocities from \(T_e\)
-2. Maxwellian O2+ velocities from \(T_i\)
+1. Maxwellian electron velocities from $T_e$
+2. Maxwellian O2+ velocities from $T_i$
 3. Center-of-mass two-body kinematics
 4. Isotropic product directions
 5. The Fox and Hać (1997) Mars O2+ vibrational distribution
 
-The default calculation uses \(10^6\) dissociative recombination events at each MGITM altitude. Events are processed in batches of \(10^5\) to limit memory use. Heatmaps use bilinear display interpolation, similar to MATLAB `shading interp`. The interpolation affects only figure rendering and does not modify the saved source-data grid.
+The default calculation uses $10^6$ dissociative recombination events at each MGITM altitude. Events are processed in batches of $10^5$ to limit memory use. Heatmaps use bilinear display interpolation, similar to MATLAB `shading interp`. The interpolation affects only figure rendering and does not modify the saved source-data grid.
 
 It does not yet include the velocity-dependent dissociative recombination acceptance probability or O2+ rotational energy.
 
