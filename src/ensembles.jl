@@ -176,6 +176,7 @@ function run_hot_o_corona(
                 )
                 theta_lab = sample_scattering_angle(
                     rng, scattering_distribution,
+                    O_MASS_KG, target.mass_kg,
                 )
                 projectile_after, target_after = elastic_collision_lab(
                     particle.velocity_m_s,

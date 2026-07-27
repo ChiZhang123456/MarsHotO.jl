@@ -96,7 +96,7 @@ def total_cross_section(
 def make_figure() -> plt.Figure:
     configure_matplotlib()
     random_grid, angle_grid_deg = load_scattering_distribution()
-    theta_deg = np.geomspace(0.12, 180.0, 2000)
+    theta_deg = np.linspace(0.12, 180.0, 2000)
     theta_rad = np.deg2rad(theta_deg)
 
     rng = np.random.default_rng(RANDOM_SEED)
@@ -142,15 +142,17 @@ def make_figure() -> plt.Figure:
     )
     axes[0].legend(loc="best")
 
-    bin_edges_deg = np.geomspace(0.12, 180.0, 61)
+    bin_edges_deg = np.linspace(0.0, 180.0, 91)
     sampled_count, _ = np.histogram(samples_deg, bins=bin_edges_deg)
-    sampled_fraction = sampled_count / SAMPLE_COUNT
+    bin_width_deg = np.diff(bin_edges_deg)
+    sampled_density = sampled_count / (SAMPLE_COUNT * bin_width_deg)
     expected_fraction = np.diff(
         np.interp(bin_edges_deg, angle_grid_deg, random_grid)
     )
-    bin_center = np.sqrt(bin_edges_deg[:-1] * bin_edges_deg[1:])
+    expected_density = expected_fraction / bin_width_deg
+    bin_center = 0.5 * (bin_edges_deg[:-1] + bin_edges_deg[1:])
     axes[1].stairs(
-        sampled_fraction,
+        sampled_density,
         bin_edges_deg,
         fill=True,
         color="#E07B39",
@@ -159,18 +161,17 @@ def make_figure() -> plt.Figure:
     )
     axes[1].plot(
         bin_center,
-        expected_fraction,
+        expected_density,
         color="#222222",
         linewidth=1.3,
         label="Lookup-table probability",
     )
     axes[1].set(
-        xscale="log",
-        yscale="log",
-        ylim=(1.0e-6, 2.0e-1),
+        xlim=(0.0, 180.0),
+        ylim=(0.0, None),
         xlabel=r"LAB scattering angle, $\theta$ (deg)",
-        ylabel="Probability per logarithmic bin",
-        title="Inverse-CDF scattering-angle sampling",
+        ylabel=r"Probability density (deg$^{-1}$)",
+        title="Kallio and Barabash angle distribution",
     )
     axes[1].legend(loc="best")
 
@@ -187,9 +188,16 @@ def make_figure() -> plt.Figure:
         r"CO$_2$": COLORS[r"CO$_2$"],
     }
     for species, mass_amu in energy_loss_groups.items():
+        theta_max_deg = (
+            180.0 if PROJECTILE_MASS_AMU < mass_amu else
+            np.rad2deg(np.arcsin(mass_amu / PROJECTILE_MASS_AMU))
+        )
+        species_theta_deg = np.linspace(0.12, theta_max_deg, 2000)
         axes[2].plot(
-            theta_deg,
-            fractional_energy_loss(theta_rad, mass_amu),
+            species_theta_deg,
+            fractional_energy_loss(
+                np.deg2rad(species_theta_deg), mass_amu
+            ),
             color=energy_loss_colors[species],
             linewidth=1.3,
             label=species,
@@ -202,6 +210,13 @@ def make_figure() -> plt.Figure:
         title="Elastic energy transfer",
     )
     axes[2].legend(ncol=2, loc="upper left")
+    axes[2].axvline(
+        90.0, color=COLORS["O"], linestyle=":", linewidth=0.9
+    )
+    axes[2].text(
+        92.0, 0.04, "O + O LAB limit",
+        color=COLORS["O"], fontsize=7, va="bottom", rotation=90,
+    )
 
     for label, axis in zip(("a", "b", "c"), axes):
         axis.text(

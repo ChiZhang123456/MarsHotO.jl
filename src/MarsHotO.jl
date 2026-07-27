@@ -25,6 +25,7 @@ export total_cross_section, collision_coefficient, choose_collision_target
 export load_scattering_angle_distribution, scattering_angle_cdf
 export sample_scattering_angle, sample_azimuth
 export fractional_energy_loss, fractional_energy_loss_lab
+export maximum_lab_scattering_angle
 export elastic_collision, elastic_collision_lab
 export sample_hot_o_source, transport_particle!
 export RahmatiMonteCarloConfig, HotOCoronaResult, rahmati_step_length

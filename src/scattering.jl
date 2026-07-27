@@ -62,6 +62,28 @@ sample_scattering_angle(
     rand(rng), distribution.random_number, distribution.theta_lab_rad,
 )
 
+"""
+Draw a kinematically accessible LAB projectile angle for a stationary target.
+For equal or lighter targets, the inverse CDF is conditioned on the maximum
+LAB angle permitted by elastic two-body kinematics.
+"""
+function sample_scattering_angle(
+    rng,
+    distribution::ScatteringAngleDistribution,
+    projectile_mass_kg::Real,
+    target_mass_kg::Real,
+)
+    theta_max = maximum_lab_scattering_angle(
+        projectile_mass_kg, target_mass_kg,
+    )
+    cumulative_max = scattering_angle_cdf(theta_max, distribution)
+    _linear_lookup(
+        rand(rng) * cumulative_max,
+        distribution.random_number,
+        distribution.theta_lab_rad,
+    )
+end
+
 """Return the tabulated cumulative probability at a LAB scattering angle."""
 scattering_angle_cdf(
     theta_lab_rad::Real,

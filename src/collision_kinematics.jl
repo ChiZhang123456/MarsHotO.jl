@@ -41,8 +41,20 @@ function elastic_collision(projectile_velocity, target_velocity,
     projectile_after, target_after
 end
 
+@inline maximum_lab_scattering_angle(projectile_mass_kg, target_mass_kg) =
+    projectile_mass_kg < target_mass_kg ?
+    pi : asin(min(target_mass_kg / projectile_mass_kg, 1.0))
+
 @inline function _lab_speed_ratio(theta_lab_rad, projectile_mass_kg,
                                   target_mass_kg)
+    theta_max = maximum_lab_scattering_angle(
+        projectile_mass_kg, target_mass_kg,
+    )
+    0 <= theta_lab_rad <= theta_max + 16eps(Float64) ||
+        throw(DomainError(
+            theta_lab_rad,
+            "LAB scattering angle exceeds the elastic kinematic limit",
+        ))
     mass_ratio = projectile_mass_kg / target_mass_kg
     discriminant = max(
         1 - (mass_ratio * sin(theta_lab_rad))^2,

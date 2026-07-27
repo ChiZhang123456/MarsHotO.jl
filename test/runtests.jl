@@ -51,6 +51,11 @@ end
     empirical = sum(x <= deg2rad(1.0) for x in samples) / length(samples)
     expected = scattering_angle_cdf(deg2rad(1.0), distribution)
     @test abs(empirical - expected) < 0.005
+    equal_mass_samples = [
+        sample_scattering_angle(rng, distribution, 16.0, 16.0)
+        for _ in 1:100_000
+    ]
+    @test all(equal_mass_samples .<= pi / 2)
 end
 
 @testset "Elastic collision" begin
@@ -81,6 +86,11 @@ end
     measured_loss_lab = 1 - sum(abs2, v1_after_lab) / sum(abs2, v1)
     @test measured_loss_lab ≈
           fractional_energy_loss_lab(theta_lab, m1, m2)
+    @test maximum_lab_scattering_angle(16.0, 16.0) ≈ pi / 2
+    @test maximum_lab_scattering_angle(16.0, 44.0) ≈ pi
+    @test_throws DomainError fractional_energy_loss_lab(
+        deg2rad(91.0), 16.0, 16.0,
+    )
 end
 
 @testset "MGITM atmosphere" begin
