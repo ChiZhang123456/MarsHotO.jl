@@ -146,11 +146,7 @@ julia --project=. -e "using Pkg; Pkg.test()"
 
 ### Hot O collision physics
 
-![Hot O collision physics](examples/figures/hot_o_collision_physics.png)
-
-### Discrete reaction channels
-
-![Discrete hot O channels](figures/mgitm_ls000_f070_discrete_hot_o_energy_lines.png)
+![Hot O collision physics](figures/hot_o_collision_cross_sections_and_scattering.png)
 
 ### Nascent hot O probability and spectral production with O2+ vibration
 

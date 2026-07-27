@@ -10,7 +10,7 @@ import numpy as np
 
 
 ROOT = Path(__file__).resolve().parents[1]
-OUTPUT = ROOT / "examples" / "figures" / "hot_o_collision_physics.png"
+OUTPUT = ROOT / "figures" / "hot_o_collision_cross_sections_and_scattering.png"
 
 ALPHA_CM2_SR = 0.36e-16
 BETA = -1.85
@@ -120,36 +120,47 @@ def make_figure() -> plt.Figure:
     )
 
     figure, axes = plt.subplots(
-        2,
-        2,
-        figsize=(7.2, 6.0),
+        1,
+        3,
+        figsize=(9.0, 3.2),
         constrained_layout=True,
     )
 
-    axes[0, 0].plot(
-        theta_deg,
-        differential_cross_section(theta_rad),
-        color="#2878B5",
-        linewidth=1.6,
+    energy_ev = np.geomspace(0.01, 100.0, 600)
+    cross_section_groups = {
+        "O": TARGETS["O"],
+        r"CO, N$_2$, O$_2$": TARGETS["CO"],
+        "Ar": TARGETS["Ar"],
+        r"CO$_2$": TARGETS[r"CO$_2$"],
+    }
+    cross_section_colors = {
+        "O": COLORS["O"],
+        r"CO, N$_2$, O$_2$": COLORS[r"O$_2$"],
+        "Ar": COLORS["Ar"],
+        r"CO$_2$": COLORS[r"CO$_2$"],
+    }
+    for species, (_, sigma_3ev_cm2) in cross_section_groups.items():
+        axes[0].plot(
+            energy_ev,
+            total_cross_section(energy_ev, sigma_3ev_cm2),
+            color=cross_section_colors[species],
+            linewidth=1.4,
+            label=species,
+        )
+    axes[0].axvline(
+        3.0, color="0.35", linestyle="--", linewidth=0.9, label="3 eV"
     )
-    axes[0, 0].axvline(
-        THETA_MIN_DEG,
-        color="0.25",
-        linestyle="--",
-        linewidth=1.0,
-        label=rf"$\theta_{{\min}}={THETA_MIN_DEG:g}^\circ$",
-    )
-    axes[0, 0].set(
+    axes[0].set(
         xscale="log",
         yscale="log",
-        xlabel=r"COM scattering angle, $\theta$ (deg)",
-        ylabel=r"$d\sigma/d\Omega$ (cm$^2$ sr$^{-1}$)",
-        title="Kharchenko O-O differential cross section",
+        xlabel="Relative collision energy (eV)",
+        ylabel=r"Total cross section (cm$^2$)",
+        title="Energy-dependent cross sections",
     )
-    axes[0, 0].legend(loc="best")
+    axes[0].legend(loc="best")
 
     bin_edges_deg = np.geomspace(THETA_MIN_DEG, 180.0, 61)
-    axes[0, 1].hist(
+    axes[1].hist(
         samples_deg,
         bins=bin_edges_deg,
         density=True,
@@ -157,14 +168,21 @@ def make_figure() -> plt.Figure:
         alpha=0.55,
         label=f"Monte Carlo, N = {SAMPLE_COUNT:,}",
     )
-    axes[0, 1].plot(
+    axes[1].plot(
         theta_cut_deg,
         angle_pdf(theta_cut_rad, theta_min_rad) * np.pi / 180.0,
         color="#222222",
         linewidth=1.3,
         label="Analytical PDF",
     )
-    axes[0, 1].set(
+    axes[1].axvline(
+        THETA_MIN_DEG,
+        color="0.35",
+        linestyle="--",
+        linewidth=0.9,
+        label=rf"$\theta_{{\min}}={THETA_MIN_DEG:g}^\circ$",
+    )
+    axes[1].set(
         xscale="log",
         yscale="log",
         ylim=(1.0e-5, 1.0e-1),
@@ -172,50 +190,43 @@ def make_figure() -> plt.Figure:
         ylabel=r"Probability density (deg$^{-1}$)",
         title="Inverse-CDF scattering-angle sampling",
     )
-    axes[0, 1].legend(loc="best")
+    axes[1].legend(loc="best")
 
-    for species, (mass_amu, _) in TARGETS.items():
-        axes[1, 0].plot(
+    energy_loss_groups = {
+        "O": TARGETS["O"][0],
+        r"CO, N$_2$": TARGETS["CO"][0],
+        r"O$_2$": TARGETS[r"O$_2$"][0],
+        "Ar": TARGETS["Ar"][0],
+        r"CO$_2$": TARGETS[r"CO$_2$"][0],
+    }
+    energy_loss_colors = {
+        "O": COLORS["O"],
+        r"CO, N$_2$": COLORS["CO"],
+        r"O$_2$": COLORS[r"O$_2$"],
+        "Ar": COLORS["Ar"],
+        r"CO$_2$": COLORS[r"CO$_2$"],
+    }
+    for species, mass_amu in energy_loss_groups.items():
+        axes[2].plot(
             theta_deg,
             fractional_energy_loss(theta_rad, mass_amu),
-            color=COLORS[species],
+            color=energy_loss_colors[species],
             linewidth=1.3,
             label=species,
         )
-    axes[1, 0].axvline(
+    axes[2].axvline(
         THETA_MIN_DEG, color="0.35", linestyle="--", linewidth=0.9
     )
-    axes[1, 0].set(
+    axes[2].set(
         xlim=(0.0, 180.0),
         ylim=(0.0, 1.02),
         xlabel=r"COM scattering angle, $\theta$ (deg)",
         ylabel=r"Fractional energy loss, $\Delta E/E$",
         title="Elastic energy transfer",
     )
-    axes[1, 0].legend(ncol=2, loc="upper left")
+    axes[2].legend(ncol=2, loc="upper left")
 
-    energy_ev = np.geomspace(0.01, 100.0, 600)
-    for species, (_, sigma_3ev_cm2) in TARGETS.items():
-        axes[1, 1].plot(
-            energy_ev,
-            total_cross_section(energy_ev, sigma_3ev_cm2),
-            color=COLORS[species],
-            linewidth=1.3,
-            label=species,
-        )
-    axes[1, 1].axvline(
-        3.0, color="0.35", linestyle="--", linewidth=0.9, label="3 eV"
-    )
-    axes[1, 1].set(
-        xscale="log",
-        yscale="log",
-        xlabel="Relative collision energy (eV)",
-        ylabel=r"Total cross section (cm$^2$)",
-        title=r"$\sigma(E)=\sigma(3\,\mathrm{eV})(E/3\,\mathrm{eV})^{-0.2}$",
-    )
-    axes[1, 1].legend(ncol=2, loc="best")
-
-    for label, axis in zip(("a", "b", "c", "d"), axes.flat):
+    for label, axis in zip(("a", "b", "c"), axes):
         axis.text(
             0.02,
             0.98,
@@ -229,7 +240,7 @@ def make_figure() -> plt.Figure:
         axis.grid(True, which="both", color="0.91", linewidth=0.5)
 
     figure.suptitle(
-        "Hot O collision physics used by MarsHotO",
+        r"Hot O collision physics, $\theta_{\min}=10^\circ$",
         fontsize=10,
     )
     return figure
