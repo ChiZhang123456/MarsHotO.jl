@@ -18,7 +18,7 @@ end
 
 @testset "Cross sections" begin
     targets = load_collision_targets(joinpath(
-        ROOT, "data", "cross_sections", "ali_total_cross_sections.toml",
+        ROOT, "data", "cross_sections", "rahmati_total_cross_sections.toml",
     ))
     oxygen = only(filter(x -> x.species == :O, targets))
     @test total_cross_section(oxygen, 3.0) ≈ 6.4e-19
@@ -76,7 +76,7 @@ end
         ROOT, "data", "chemistry", "o2plus_dissociative_recombination.toml",
     ))
     targets = load_collision_targets(joinpath(
-        ROOT, "data", "cross_sections", "ali_total_cross_sections.toml",
+        ROOT, "data", "cross_sections", "rahmati_total_cross_sections.toml",
     ))
     rng = Xoshiro(20260727)
     source = sample_hot_o_source(
@@ -90,15 +90,15 @@ end
     @test result.reason == :maximum_steps
     @test result.steps == 10
 
-    @test ali_step_length(5_000.0) == 500.0
-    @test ali_step_length(10_000.0) == 1000.0
+    @test rahmati_step_length(5_000.0) == 500.0
+    @test rahmati_step_length(10_000.0) == 1000.0
     corona = run_hot_o_corona(
         profile, targets, branches;
         chemistry_path=joinpath(
             ROOT, "data", "chemistry",
             "o2plus_dissociative_recombination.toml",
         ),
-        config=AliMonteCarloConfig(
+        config=RahmatiMonteCarloConfig(
             primary_particles=20,
             seed=73,
             maximum_altitude_m=260e3,

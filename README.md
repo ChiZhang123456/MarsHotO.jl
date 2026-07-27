@@ -68,7 +68,7 @@ Plots the O-O differential cross section, the normalized scattering-angle probab
 
 Plots O2+ density, neutral/ion/electron temperatures, and hot O production rate versus altitude.
 
-### Complete Ali Monte Carlo example
+### Complete Rahmati Monte Carlo example
 
 Run the Julia transport model and then plot the residence-time altitude-energy
 density:

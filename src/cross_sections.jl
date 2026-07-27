@@ -7,7 +7,7 @@ function load_collision_targets(path::AbstractString)
     ) for item in input["target"]]
 end
 
-"""Ali/Rahmati energy-dependent total cross section, in m^2."""
+"""Rahmati energy-dependent total cross section, in m^2."""
 function total_cross_section(target::CollisionTarget, energy_eV::Real)
     energy_eV > 0 || return 0.0
     target.sigma_3eV_m2 * (energy_eV / 3)^(-0.2)

@@ -1,4 +1,4 @@
-Base.@kwdef struct AliMonteCarloConfig
+Base.@kwdef struct RahmatiMonteCarloConfig
     primary_particles::Int = 10_000
     seed::Int = 20260727
     theta_min_rad::Float64 = deg2rad(10.0)
@@ -22,8 +22,8 @@ struct HotOCoronaResult
     stop_counts::Dict{Symbol,Int}
 end
 
-"""Ali step rule: 0.1 mfp below 10 km, otherwise 1 km."""
-ali_step_length(mean_free_path_m::Real) =
+"""Rahmati step rule: 0.1 mfp below 10 km, otherwise 1 km."""
+rahmati_step_length(mean_free_path_m::Real) =
     mean_free_path_m < 10_000 ? 0.1 * mean_free_path_m : 1000.0
 
 function _shell_edges_m(altitude_m)
@@ -76,7 +76,7 @@ function _advance_gravity(position, velocity, ds)
 end
 
 """
-Run the spherical-column Ali Monte Carlo model.
+Run the spherical-column Rahmati Monte Carlo model.
 
 The nearest-subsolar MGITM profile is extended spherically. Source particles
 are sampled in proportion to Q_hotO(z) times shell volume. The returned
@@ -85,7 +85,7 @@ height-energy density uses a residence-time estimator.
 function run_hot_o_corona(
     atmosphere::AtmosphereProfile, targets, branches;
     chemistry_path::AbstractString,
-    config::AliMonteCarloConfig=AliMonteCarloConfig(),
+    config::RahmatiMonteCarloConfig=RahmatiMonteCarloConfig(),
 )
     config.primary_particles > 0 || error("primary_particles must be positive")
     rng = Xoshiro(config.seed)
@@ -158,7 +158,7 @@ function run_hot_o_corona(
                 theta_min_rad=config.theta_min_rad,
             )
             mfp = kappa > 0 ? inv(kappa) : Inf
-            ds = ali_step_length(mfp)
+            ds = rahmati_step_length(mfp)
             position1, velocity1, dt =
                 _advance_gravity(particle.position_m, particle.velocity_m_s, ds)
             _accumulate_residence!(

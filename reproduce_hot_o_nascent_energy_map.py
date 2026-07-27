@@ -2,7 +2,7 @@
 
 This script creates:
 1. A Lillis Figure 1 style conditional energy probability map.
-2. An Ali Rahmati Figure 2.4 style spectral production rate map.
+2. A Rahmati Figure 2.4 style spectral production rate map.
 
 The nascent energy broadening is calculated from Maxwellian electron and O2+
 velocities followed by two-body reaction kinematics. Collisions with the

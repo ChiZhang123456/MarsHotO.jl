@@ -12,10 +12,10 @@ chemistry_path = joinpath(
 )
 branches = load_reaction_branches(chemistry_path)
 targets = load_collision_targets(joinpath(
-    ROOT, "data", "cross_sections", "ali_total_cross_sections.toml",
+    ROOT, "data", "cross_sections", "rahmati_total_cross_sections.toml",
 ))
 
-config = AliMonteCarloConfig(
+config = RahmatiMonteCarloConfig(
     primary_particles=PARTICLES,
     seed=SEED,
     altitude_edges_km=collect(100.0:10.0:2000.0),

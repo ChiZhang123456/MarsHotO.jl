@@ -74,7 +74,7 @@ MarsHotO 将火星热 O 模型分成两个相互连接的部分。
 | 物理内容 | 文件 |
 |---|---|
 | 解离复合分支和振动态 | `data/chemistry/o2plus_dissociative_recombination.toml` |
-| 总碰撞截面 | `data/cross_sections/ali_total_cross_sections.toml` |
+| 总碰撞截面 | `data/cross_sections/rahmati_total_cross_sections.toml` |
 | 散射角分布 | `data/cross_sections/scattering_angle_distribution.txt` |
 | MGITM 大气 | `data/atmosphere/` |
 | 热 O 初始粒子 | `src/source_particles.jl` |
@@ -82,4 +82,4 @@ MarsHotO 将火星热 O 模型分成两个相互连接的部分。
 | Monte Carlo 系综 | `src/ensembles.jl` |
 | 完整示例 | `examples/run_hot_o_corona.jl` |
 
-当前模型采用 Ali 博士论文列出的 Monte Carlo 传输框架，并使用 Lillis 等人的热 O 源模型思路。具体采用了哪些近似，以及哪些输入还需要改进，分别写在上述三个文档中。
+当前模型采用 Rahmati 博士论文列出的 Monte Carlo 传输框架，并使用 Lillis 等人的热 O 源模型思路。具体采用了哪些近似，以及哪些输入还需要改进，分别写在上述三个文档中。

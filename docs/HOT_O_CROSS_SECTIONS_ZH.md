@@ -32,7 +32,7 @@
 
 ## 2. 当前采用的总碰撞截面
 
-MarsHotO 当前在 `data/cross_sections/ali_total_cross_sections.toml` 中设置了以下 3 eV 参考截面。
+MarsHotO 当前在 `data/cross_sections/rahmati_total_cross_sections.toml` 中设置了以下 3 eV 参考截面。
 
 | 目标成分 | $\sigma(3\ \mathrm{eV})$，$\mathrm{cm^2}$ | 当前 MGITM 中是否存在 |
 |---|---:|---|
@@ -49,7 +49,7 @@ MarsHotO 当前在 `data/cross_sections/ali_total_cross_sections.toml` 中设置
 1\ \mathrm{cm^2}=10^{-4}\ \mathrm{m^2}.
 ```
 
-当前采用 Ali 模型中的近似能量依赖：
+当前采用 Rahmati 模型中的近似能量依赖：
 
 ```math
 \sigma_s(E)=\sigma_s(3\ \mathrm{eV})
@@ -89,7 +89,7 @@ r<P_{\mathrm{coll}},
 
 就认为这一步发生碰撞。
 
-Ali 给出的步长规则为：
+Rahmati 给出的步长规则为：
 
 * 如果 $\lambda<10\ \mathrm{km}$，使用 $ds=0.1\lambda$。
 * 如果 $\lambda>10\ \mathrm{km}$，使用 $ds=1\ \mathrm{km}$。
@@ -120,7 +120,7 @@ P(s\mid\mathrm{coll})=
 
 ## 6. 角度截断对有效碰撞频率的影响
 
-Ali 模型只显式追踪 COM 散射角 $\theta\ge10^\circ$ 的碰撞。小于 $10^\circ$ 的事件非常多，但每次只产生很小的方向和能量变化。
+Rahmati 模型只显式追踪 COM 散射角 $\theta\ge10^\circ$ 的碰撞。小于 $10^\circ$ 的事件非常多，但每次只产生很小的方向和能量变化。
 
 如果总截面包含所有角度，而模拟只保留 $\theta\ge\theta_{\min}$，则有效碰撞系数需要乘以保留比例
 

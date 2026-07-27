@@ -228,9 +228,9 @@ Q(E_k,z)=Q_{\mathrm{hotO}}(z)p(E_k\mid z).
 
 ![热 O 初生能量图](../examples/figures/mgitm_ls000_f070_hot_o_nascent_energy_with_vibration_energy_maps.png)
 
-## 9. 与 Ali 和 Lillis 模型的关系
+## 9. 与 Rahmati 和 Lillis 模型的关系
 
-Ali 和 Lillis 所用源模型的核心思想相同：
+Rahmati 和 Lillis 所用源模型的核心思想相同：
 
 1. 由解离复合率确定高度源强。
 2. 由分支能量确定主要能量峰。
