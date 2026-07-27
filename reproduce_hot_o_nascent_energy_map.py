@@ -33,8 +33,10 @@ SOURCE_DATA_FILE = (
 )
 
 RANDOM_SEED = 20260727
-REACTIONS_PER_ALTITUDE = 200_000
+REACTIONS_PER_ALTITUDE = 1_000_000
+REACTIONS_PER_BATCH = 100_000
 ENERGY_EDGES_EV = np.linspace(0.0, 7.0, 281)
+PLOT_INTERPOLATION = "bilinear"
 
 ELECTRON_MASS_KG = 9.1093837139e-31
 ATOMIC_MASS_UNIT_KG = 1.66053906892e-27
@@ -177,13 +179,19 @@ def calculate_energy_maps(
     )
 
     for altitude_index, row in profile.iterrows():
-        energies_ev = sample_nascent_o_energies(
-            rng,
-            electron_temperature_k=float(row["Te_K"]),
-            ion_temperature_k=float(row["Ti_K"]),
-            reaction_count=REACTIONS_PER_ALTITUDE,
-        )
-        counts, _ = np.histogram(energies_ev, bins=ENERGY_EDGES_EV)
+        counts = np.zeros(len(energy_centers_ev), dtype=np.int64)
+        reactions_remaining = REACTIONS_PER_ALTITUDE
+        while reactions_remaining > 0:
+            batch_size = min(REACTIONS_PER_BATCH, reactions_remaining)
+            energies_ev = sample_nascent_o_energies(
+                rng,
+                electron_temperature_k=float(row["Te_K"]),
+                ion_temperature_k=float(row["Ti_K"]),
+                reaction_count=batch_size,
+            )
+            batch_counts, _ = np.histogram(energies_ev, bins=ENERGY_EDGES_EV)
+            counts += batch_counts
+            reactions_remaining -= batch_size
         probability_density_ev1[altitude_index, :] = (
             counts / counts.sum() / energy_bin_width_ev
         )
@@ -242,11 +250,17 @@ def make_probability_figure(
     configure_matplotlib()
     fig, axis = plt.subplots(figsize=(4.5, 4.0), constrained_layout=True)
     positive_values = probability_density_ev1[probability_density_ev1 > 0.0]
-    image = axis.pcolormesh(
-        energy_centers_ev,
-        altitude_km,
+    image = axis.imshow(
         probability_density_ev1,
-        shading="auto",
+        origin="lower",
+        aspect="auto",
+        extent=(
+            float(energy_centers_ev[0]),
+            float(energy_centers_ev[-1]),
+            float(altitude_km[0]),
+            float(altitude_km[-1]),
+        ),
+        interpolation=PLOT_INTERPOLATION,
         cmap="viridis",
         vmin=0.0,
         vmax=float(np.percentile(positive_values, 99.5)),
@@ -289,11 +303,17 @@ def make_production_figure(
     log_production = np.log10(
         np.maximum(spectral_production_cm3s_ev1, 1.0e-6)
     )
-    image = axis.pcolormesh(
-        energy_centers_ev,
-        altitude_km,
+    image = axis.imshow(
         log_production,
-        shading="auto",
+        origin="lower",
+        aspect="auto",
+        extent=(
+            float(energy_centers_ev[0]),
+            float(energy_centers_ev[-1]),
+            float(altitude_km[0]),
+            float(altitude_km[-1]),
+        ),
+        interpolation=PLOT_INTERPOLATION,
         cmap="turbo",
         vmin=-4.0,
         vmax=4.5,
@@ -376,6 +396,8 @@ def main() -> None:
     )
     print(f"Random seed: {RANDOM_SEED}")
     print(f"Reactions per altitude: {REACTIONS_PER_ALTITUDE}")
+    print(f"Reactions per batch: {REACTIONS_PER_BATCH}")
+    print(f"Plot interpolation: {PLOT_INTERPOLATION}")
     print(
         "Normalized vibrational probabilities: "
         f"{VIBRATIONAL_PROBABILITY.tolist()}"

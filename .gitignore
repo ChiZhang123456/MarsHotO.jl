@@ -6,12 +6,15 @@ __pycache__/
 # Local temporary files
 tmp/
 
-# Large MGITM model inputs
-MGITM/
-
-# Local literature PDFs
+# Local literature and vector/raster-independent result files
 *.pdf
-!figures/*.pdf
+*.csv
+*.svg
+
+# Local project-control and planning files
+AGENTS.md
+HOT_OXYGEN_MODEL_PLAN.md
+requirements.txt
 
 # Editor and operating system files
 .DS_Store

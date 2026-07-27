@@ -64,6 +64,8 @@ The calculation currently includes:
 4. Isotropic product directions
 5. The Fox and Hać (1997) Mars O2+ vibrational distribution
 
+The default calculation uses \(10^6\) dissociative recombination events at each MGITM altitude. Events are processed in batches of \(10^5\) to limit memory use. Heatmaps use bilinear display interpolation, similar to MATLAB `shading interp`. The interpolation affects only figure rendering and does not modify the saved source-data grid.
+
 It does not yet include the velocity-dependent dissociative recombination acceptance probability or O2+ rotational energy.
 
 ## Input data
@@ -74,7 +76,7 @@ The scripts currently use:
 MGITM/MGITM_LS000_F070_150901.dat
 ```
 
-MGITM input files are not stored in this repository because the full 12-case input collection is approximately 399 MB. Place the required files in a local `MGITM` directory before running the scripts.
+The `MGITM` directory contains all 12 model cases spanning four seasons and three solar activity levels. The current prototype uses the `Ls = 0 degrees`, F070 case as its baseline.
 
 The baseline case uses the two nearest subsolar grid columns:
 
@@ -88,10 +90,10 @@ The two profiles are averaged.
 
 ## Python environment
 
-Install the required packages:
+Install NumPy, pandas, and Matplotlib:
 
 ```bash
-python -m pip install -r requirements.txt
+python -m pip install numpy pandas matplotlib
 ```
 
 Run the scripts:
