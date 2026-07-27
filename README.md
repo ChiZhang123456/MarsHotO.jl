@@ -146,11 +146,11 @@ julia --project=. -e "using Pkg; Pkg.test()"
 
 ### Hot O collision physics
 
-![Hot O collision physics](figures/hot_o_collision_cross_sections_and_scattering.png)
+![Hot O collision physics](examples/figures/hot_o_collision_cross_sections_and_scattering.png)
 
 ### Nascent hot O probability and spectral production with O2+ vibration
 
-![Hot O energy maps](figures/mgitm_ls000_f070_hot_o_nascent_energy_with_vibration_energy_maps.png)
+![Hot O energy maps](examples/figures/mgitm_ls000_f070_hot_o_nascent_energy_with_vibration_energy_maps.png)
 
 ## References
 

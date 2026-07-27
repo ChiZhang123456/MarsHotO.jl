@@ -10,7 +10,10 @@ import numpy as np
 
 
 ROOT = Path(__file__).resolve().parents[1]
-OUTPUT = ROOT / "figures" / "hot_o_collision_cross_sections_and_scattering.png"
+OUTPUT = (
+    ROOT / "examples" / "figures" /
+    "hot_o_collision_cross_sections_and_scattering.png"
+)
 
 ALPHA_CM2_SR = 0.36e-16
 BETA = -1.85

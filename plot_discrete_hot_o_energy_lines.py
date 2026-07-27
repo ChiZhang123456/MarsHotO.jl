@@ -17,7 +17,7 @@ from plot_mgitm_hot_o_profiles import (
 
 
 ROOT = Path(__file__).resolve().parent
-OUTPUT_DIR = ROOT / "figures"
+OUTPUT_DIR = ROOT / "examples" / "figures"
 OUTPUT_STEM = OUTPUT_DIR / "mgitm_ls000_f070_discrete_hot_o_energy_lines"
 SOURCE_DATA_FILE = OUTPUT_DIR / "mgitm_ls000_f070_discrete_hot_o_energy_lines.csv"
 

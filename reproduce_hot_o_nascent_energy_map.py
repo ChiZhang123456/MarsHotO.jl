@@ -24,7 +24,7 @@ from plot_mgitm_hot_o_profiles import (
 
 
 ROOT = Path(__file__).resolve().parent
-OUTPUT_DIR = ROOT / "figures"
+OUTPUT_DIR = ROOT / "examples" / "figures"
 OUTPUT_PREFIX = (
     OUTPUT_DIR / "mgitm_ls000_f070_hot_o_nascent_energy_with_vibration"
 )

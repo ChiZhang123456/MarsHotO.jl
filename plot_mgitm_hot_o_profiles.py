@@ -11,7 +11,7 @@ import pandas as pd
 
 ROOT = Path(__file__).resolve().parent
 INPUT_FILE = ROOT / "MGITM" / "MGITM_LS000_F070_150901.dat"
-OUTPUT_DIR = ROOT / "figures"
+OUTPUT_DIR = ROOT / "examples" / "figures"
 OUTPUT_STEM = OUTPUT_DIR / "mgitm_ls000_f070_subsolar_hot_o_profiles"
 SOURCE_DATA_FILE = OUTPUT_DIR / "mgitm_ls000_f070_subsolar_hot_o_profiles.csv"
 
