@@ -168,7 +168,8 @@ def make_figure() -> plt.Figure:
     )
     axes[1].set(
         xlim=(0.0, 180.0),
-        ylim=(0.0, None),
+        yscale="log",
+        ylim=(1.0e-6, 1.0),
         xlabel=r"LAB scattering angle, $\theta$ (deg)",
         ylabel=r"Probability density (deg$^{-1}$)",
         title="Kallio and Barabash angle distribution",
