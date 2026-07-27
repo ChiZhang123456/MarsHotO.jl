@@ -5,6 +5,7 @@ __pycache__/
 
 # Local temporary files
 tmp/
+examples/output/
 
 # Local literature and vector/raster-independent result files
 *.pdf

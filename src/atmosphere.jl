@@ -62,9 +62,21 @@ function _linear_interp(x::Real, xp, fp)
     return muladd(w, fp[i + 1] - fp[i], fp[i])
 end
 
+function _log_density_interp(x::Real, xp, fp)
+    positive = max.(fp, floatmin(Float64))
+    if x <= xp[1]
+        return positive[1]
+    elseif x >= xp[end]
+        slope = (log(positive[end]) - log(positive[end-1])) /
+                (xp[end] - xp[end-1])
+        return exp(log(positive[end]) + min(slope, 0.0) * (x - xp[end]))
+    end
+    exp(_linear_interp(x, xp, log.(positive)))
+end
+
 """Interpolate temperatures and densities at altitude in metres."""
 function interpolate_profile(profile::AtmosphereProfile, altitude_m::Real)
-    densities = Dict(k => _linear_interp(altitude_m, profile.altitude_m, v)
+    densities = Dict(k => _log_density_interp(altitude_m, profile.altitude_m, v)
                      for (k, v) in profile.density_m3)
     return (
         Tn_K=_linear_interp(altitude_m, profile.altitude_m, profile.Tn_K),

@@ -69,6 +69,8 @@ end
     @test profile.longitude_deg == [27.5, 27.5]
     @test profile.sza_deg ≈ 2.73115946 atol=1e-7
     @test all(profile.density_m3[:O2p] .> 0)
+    @test interpolate_profile(profile, 500e3).density_m3[:CO2] <
+          profile.density_m3[:CO2][end]
 
     branches = load_reaction_branches(joinpath(
         ROOT, "data", "chemistry", "o2plus_dissociative_recombination.toml",
@@ -87,4 +89,26 @@ end
     )
     @test result.reason == :maximum_steps
     @test result.steps == 10
+
+    @test ali_step_length(5_000.0) == 500.0
+    @test ali_step_length(10_000.0) == 1000.0
+    corona = run_hot_o_corona(
+        profile, targets, branches;
+        chemistry_path=joinpath(
+            ROOT, "data", "chemistry",
+            "o2plus_dissociative_recombination.toml",
+        ),
+        config=AliMonteCarloConfig(
+            primary_particles=20,
+            seed=73,
+            maximum_altitude_m=260e3,
+            maximum_steps_per_particle=10_000,
+            maximum_total_particles=10_000,
+            altitude_edges_km=collect(100.0:10.0:260.0),
+            energy_edges_eV=collect(range(0.01, 7.0; length=29)),
+        ),
+    )
+    @test corona.primary_particles == 20
+    @test all(corona.density_cm3_eV1 .>= 0)
+    @test sum(corona.density_cm3_eV1) > 0
 end

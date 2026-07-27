@@ -13,6 +13,7 @@ include("scattering.jl")
 include("collision_kinematics.jl")
 include("source_particles.jl")
 include("transport.jl")
+include("ensembles.jl")
 
 export AtmosphereProfile, CollisionTarget, DRBranch, HotOParticle
 export MARS_RADIUS_M, O_MASS_KG, EV_J
@@ -25,5 +26,7 @@ export angular_cross_section_fraction, scattering_angle_cdf
 export sample_scattering_angle, sample_azimuth
 export fractional_energy_loss, elastic_collision
 export sample_hot_o_source, transport_particle!
+export AliMonteCarloConfig, HotOCoronaResult, ali_step_length
+export run_hot_o_corona, write_corona_distribution
 
 end

@@ -64,6 +64,24 @@ Plots the O-O differential cross section, the normalized scattering-angle probab
 
 Plots O2+ density, neutral/ion/electron temperatures, and hot O production rate versus altitude.
 
+### Complete Ali Monte Carlo example
+
+Run the Julia transport model and then plot the residence-time altitude-energy
+density:
+
+```bash
+julia --project=. examples/run_hot_o_corona.jl 10000
+python examples/plot_hot_o_corona.py
+```
+
+The particle count is configurable. A production calculation can use
+approximately `10000000` primary particles, but should be run on an HPC
+system. The packaged MGITM profile ends near 250 km, so the current example
+uses a decreasing log-linear density extrapolation above the model top.
+The nearest-subsolar column is extended spherically, so its absolute global
+source rate is a model approximation rather than a full three-dimensional
+MGITM result.
+
 ### `plot_mgitm_hot_o_profiles.py`
 
 Plots:
@@ -154,6 +172,10 @@ julia --project=. -e "using Pkg; Pkg.test()"
 ### Nascent hot O probability and spectral production with O2+ vibration
 
 ![Hot O energy maps](examples/figures/mgitm_ls000_f070_hot_o_nascent_energy_with_vibration_energy_maps.png)
+
+### Monte Carlo hot O altitude-energy distribution
+
+![Monte Carlo hot O altitude-energy distribution](examples/figures/hot_o_altitude_energy_distribution.png)
 
 ## References
 
