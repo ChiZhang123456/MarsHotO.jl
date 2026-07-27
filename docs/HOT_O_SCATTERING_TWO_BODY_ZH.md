@@ -2,8 +2,6 @@
 
 ## 1. 当前模型采用什么角分布
 
-MarsHotO 不再使用 Rahmati 的解析散射角分布，也不设置 10° 的最小散射角。
-
 当前模型直接读取
 `data/cross_sections/scattering_angle_distribution.txt`。这个文件来自
 MarsASPEN，原始数据由 Kallio 与 Barabash (2001) 的 Figure 2 数字化得到。
