@@ -152,9 +152,9 @@ julia --project=. -e "using Pkg; Pkg.test()"
 
 ![Discrete hot O channels](figures/mgitm_ls000_f070_discrete_hot_o_energy_lines.png)
 
-### Nascent hot O spectral production with O2+ vibration
+### Nascent hot O probability and spectral production with O2+ vibration
 
-![Hot O spectral production](figures/mgitm_ls000_f070_hot_o_nascent_energy_with_vibration_production.png)
+![Hot O energy maps](figures/mgitm_ls000_f070_hot_o_nascent_energy_with_vibration_energy_maps.png)
 
 ## References
 

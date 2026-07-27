@@ -28,6 +28,7 @@ OUTPUT_DIR = ROOT / "figures"
 OUTPUT_PREFIX = (
     OUTPUT_DIR / "mgitm_ls000_f070_hot_o_nascent_energy_with_vibration"
 )
+OUTPUT_FIGURE = Path(f"{OUTPUT_PREFIX}_energy_maps.png")
 SOURCE_DATA_FILE = (
     OUTPUT_DIR / "mgitm_ls000_f070_hot_o_nascent_energy_with_vibration_map.csv"
 )
@@ -242,15 +243,22 @@ def escape_energy_ev(altitude_km: np.ndarray) -> np.ndarray:
     )
 
 
-def make_probability_figure(
+def make_combined_figure(
     altitude_km: np.ndarray,
     energy_centers_ev: np.ndarray,
     probability_density_ev1: np.ndarray,
+    spectral_production_cm3s_ev1: np.ndarray,
 ) -> plt.Figure:
     configure_matplotlib()
-    fig, axis = plt.subplots(figsize=(4.5, 4.0), constrained_layout=True)
+    fig, axes = plt.subplots(
+        1,
+        2,
+        figsize=(8.0, 4.0),
+        sharey=True,
+        constrained_layout=True,
+    )
     positive_values = probability_density_ev1[probability_density_ev1 > 0.0]
-    image = axis.imshow(
+    probability_image = axes[0].imshow(
         probability_density_ev1,
         origin="lower",
         aspect="auto",
@@ -266,7 +274,7 @@ def make_probability_figure(
         vmax=float(np.percentile(positive_values, 99.5)),
         rasterized=True,
     )
-    axis.plot(
+    axes[0].plot(
         escape_energy_ev(altitude_km),
         altitude_km,
         color="white",
@@ -274,36 +282,28 @@ def make_probability_figure(
         ls="--",
         label="Escape energy",
     )
-    axis.set(
+    axes[0].set(
         xlabel="Nascent O energy (eV)",
         ylabel="Altitude (km)",
         xlim=(0.0, 7.0),
         ylim=(float(altitude_km.min()), float(altitude_km.max())),
-        title=(
-            r"Nascent hot O probability with O$_2^+$ vibration, "
-            r"$L_s=0^\circ$, F070"
-        ),
+        title="Conditional energy probability",
     )
-    axis.tick_params(axis="y", labelleft=True)
-    legend = axis.legend(loc="upper right", frameon=False)
+    axes[0].tick_params(axis="y", labelleft=True)
+    legend = axes[0].legend(loc="upper right", frameon=False)
     for text in legend.get_texts():
         text.set_color("white")
-    colorbar = fig.colorbar(image, ax=axis, pad=0.03)
-    colorbar.set_label(r"Probability density (eV$^{-1}$)")
-    return fig
+    probability_colorbar = fig.colorbar(
+        probability_image,
+        ax=axes[0],
+        pad=0.03,
+    )
+    probability_colorbar.set_label(r"Probability density (eV$^{-1}$)")
 
-
-def make_production_figure(
-    altitude_km: np.ndarray,
-    energy_centers_ev: np.ndarray,
-    spectral_production_cm3s_ev1: np.ndarray,
-) -> plt.Figure:
-    configure_matplotlib()
-    fig, axis = plt.subplots(figsize=(4.5, 4.0), constrained_layout=True)
     log_production = np.log10(
         np.maximum(spectral_production_cm3s_ev1, 1.0e-6)
     )
-    image = axis.imshow(
+    production_image = axes[1].imshow(
         log_production,
         origin="lower",
         aspect="auto",
@@ -319,29 +319,37 @@ def make_production_figure(
         vmax=4.5,
         rasterized=True,
     )
-    axis.set(
+    axes[1].set(
         xlabel="Nascent O energy (eV)",
-        ylabel="Altitude (km)",
         xlim=(0.0, 7.0),
         ylim=(float(altitude_km.min()), float(altitude_km.max())),
-        title=(
-            r"Hot O production with O$_2^+$ vibration, "
-            r"$L_s=0^\circ$, F070"
-        ),
+        title="Spectral production rate",
     )
-    colorbar = fig.colorbar(image, ax=axis, pad=0.03)
-    colorbar.set_label(
+    production_colorbar = fig.colorbar(
+        production_image,
+        ax=axes[1],
+        pad=0.03,
+    )
+    production_colorbar.set_label(
         r"$\log_{10}\,[Q(E,z)\;(\mathrm{cm^{-3}\,s^{-1}\,eV^{-1}})]$"
     )
+
+    for label, axis in zip(("a", "b"), axes):
+        axis.text(
+            0.02,
+            0.98,
+            label,
+            transform=axis.transAxes,
+            ha="left",
+            va="top",
+            fontsize=9,
+            fontweight="bold",
+        )
+    fig.suptitle(
+        r"Nascent hot O with O$_2^+$ vibration, $L_s=0^\circ$, F070",
+        fontsize=10,
+    )
     return fig
-
-
-def save_figure(fig: plt.Figure, suffix: str) -> None:
-    stem = Path(f"{OUTPUT_PREFIX}_{suffix}")
-    fig.savefig(stem.with_suffix(".png"), dpi=300, bbox_inches="tight")
-    fig.savefig(stem.with_suffix(".pdf"), bbox_inches="tight")
-    fig.savefig(stem.with_suffix(".svg"), bbox_inches="tight")
-    plt.close(fig)
 
 
 def main() -> None:
@@ -360,19 +368,14 @@ def main() -> None:
         spectral_production_cm3s_ev1,
     )
 
-    probability_figure = make_probability_figure(
+    combined_figure = make_combined_figure(
         profile["altitude_km"].to_numpy(),
         energy_centers_ev,
         probability_density_ev1,
-    )
-    save_figure(probability_figure, "probability")
-
-    production_figure = make_production_figure(
-        profile["altitude_km"].to_numpy(),
-        energy_centers_ev,
         spectral_production_cm3s_ev1,
     )
-    save_figure(production_figure, "production")
+    combined_figure.savefig(OUTPUT_FIGURE, dpi=400, bbox_inches="tight")
+    plt.close(combined_figure)
 
     integrated_production = np.sum(
         spectral_production_cm3s_ev1 * np.diff(ENERGY_EDGES_EV)[None, :],
