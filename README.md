@@ -1,6 +1,6 @@
 # MarsHotO.jl
 
-Mars Hot Oxygen Transport model, abbreviated MHOT, is a developing model for the production, transport, corona formation, and photochemical escape of hot atomic oxygen at Mars.
+Mars Hot Oxygen Transport model, abbreviated MHOT, is a Julia Monte Carlo simulation package for the production, collisional transport, corona formation, and photochemical escape of hot atomic oxygen at Mars.
 
 The current repository contains the Python prototype used to:
 
@@ -11,7 +11,23 @@ The current repository contains the Python prototype used to:
 5. Include the Martian O2+ vibrational distribution from Fox and Hać (1997).
 6. Plot MGITM profiles, discrete reaction channels, nascent energy probabilities, and spectral production rates.
 
-The particle transport core will be developed in Julia. Python will remain responsible for input inspection, validation, analysis, and scientific plotting.
+The Julia core reads MGITM atmospheres, samples O2+ dissociative recombination source particles, samples continuous COM scattering angles, performs exact two-body COM-to-LAB collision kinematics, and transports particles using collision optical depth and Martian gravity. Python remains responsible for input inspection, validation, analysis, and scientific plotting.
+
+## Package layout
+
+```text
+src/                  Julia simulation source
+data/chemistry/       O2+ dissociative recombination settings
+data/cross_sections/  Hot O collision settings
+data/atmosphere/      Atmosphere data notes
+MGITM/                Packaged MGITM model output
+examples/             Python scientific plotting examples
+test/                 Julia numerical and physics tests
+```
+
+## Collision physics
+
+MarsHotO samples the Rahmati fit to the Kharchenko et al. (2000) O-O differential cross section in the COM frame. The polar-angle probability includes the solid-angle Jacobian. A configurable minimum scattering angle is applied consistently to the inverse-CDF sampler and the effective total cross section. Post-collision LAB velocities conserve momentum and kinetic energy.
 
 ## Current physics
 
@@ -35,7 +51,15 @@ The prototype also supports the Mars exobase O2+ vibrational distribution report
 
 See [HOT_OXYGEN_MODEL_PLAN.md](HOT_OXYGEN_MODEL_PLAN.md) and [AGENTS.md](AGENTS.md) for the detailed model plan and fixed physical conventions.
 
-## Scripts
+## Examples and scripts
+
+### `examples/plot_collision_physics.py`
+
+Plots the O-O differential cross section, the normalized scattering-angle probability with one million Monte Carlo samples, fractional energy loss versus scattering angle, and total collision cross sections versus energy.
+
+### `examples/plot_mgitm_profiles.py`
+
+Plots O2+ density, neutral/ion/electron temperatures, and hot O production rate versus altitude.
 
 ### `plot_mgitm_hot_o_profiles.py`
 
@@ -100,17 +124,29 @@ Run the scripts:
 
 ```bash
 python plot_mgitm_hot_o_profiles.py
+python examples/plot_mgitm_profiles.py
+python examples/plot_collision_physics.py
 python plot_discrete_hot_o_energy_lines.py
 python reproduce_hot_o_nascent_energy_map.py
 ```
 
 Generated figures and source-data tables are written to `figures`.
 
+Run the Julia physics tests with:
+
+```bash
+julia --project=. -e "using Pkg; Pkg.test()"
+```
+
 ## Current results
 
 ### MGITM profiles and total production
 
-![MGITM profiles](figures/mgitm_ls000_f070_subsolar_hot_o_profiles.png)
+![MGITM profiles](examples/figures/mgitm_ls000_f070_profiles.png)
+
+### Hot O collision physics
+
+![Hot O collision physics](examples/figures/hot_o_collision_physics.png)
 
 ### Discrete reaction channels
 

@@ -1,0 +1,32 @@
+# Rahmati dissertation Table 1. Values are total cross sections at 3 eV.
+# Energy dependence: sigma(E) = sigma(3 eV) * (E / 3 eV)^(-0.2).
+
+[[target]]
+species = "O"
+mass_amu = 16.0
+sigma_3eV_cm2 = 6.4e-15
+
+[[target]]
+species = "CO"
+mass_amu = 28.0
+sigma_3eV_cm2 = 1.8e-14
+
+[[target]]
+species = "N2"
+mass_amu = 28.0
+sigma_3eV_cm2 = 1.8e-14
+
+[[target]]
+species = "O2"
+mass_amu = 32.0
+sigma_3eV_cm2 = 1.8e-14
+
+[[target]]
+species = "Ar"
+mass_amu = 40.0
+sigma_3eV_cm2 = 1.2e-14
+
+[[target]]
+species = "CO2"
+mass_amu = 44.0
+sigma_3eV_cm2 = 2.0e-14

@@ -15,6 +15,7 @@ tmp/
 AGENTS.md
 HOT_OXYGEN_MODEL_PLAN.md
 requirements.txt
+Manifest.toml
 
 # Editor and operating system files
 .DS_Store
