@@ -29,6 +29,9 @@ test/                 Julia numerical and physics tests
 
 MarsHotO samples the Rahmati fit to the Kharchenko et al. (2000) O-O differential cross section in the COM frame. The polar-angle probability includes the solid-angle Jacobian. A configurable minimum scattering angle is applied consistently to the inverse-CDF sampler and the effective total cross section. Post-collision LAB velocities conserve momentum and kinetic energy.
 
+碰撞概率、COM 散射角抽样、两体碰撞速度变换和能量传递的中文逐步说明见
+[MarsHotO 热 O 两体碰撞模型详解](docs/HOT_O_COLLISION_MODEL_ZH.md)。
+
 ## Current physics
 
 The total hot O production rate is
