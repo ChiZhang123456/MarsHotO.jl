@@ -1,0 +1,20 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Local temporary files
+tmp/
+
+# Large MGITM model inputs
+MGITM/
+
+# Local literature PDFs
+*.pdf
+!figures/*.pdf
+
+# Editor and operating system files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
