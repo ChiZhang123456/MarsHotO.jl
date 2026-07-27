@@ -40,3 +40,55 @@ function elastic_collision(projectile_velocity, target_velocity,
     target_after = _subtract(vcom, _scale(projectile_mass_kg / total_mass, relative_after))
     projectile_after, target_after
 end
+
+@inline function _lab_speed_ratio(theta_lab_rad, projectile_mass_kg,
+                                  target_mass_kg)
+    mass_ratio = projectile_mass_kg / target_mass_kg
+    discriminant = max(
+        1 - (mass_ratio * sin(theta_lab_rad))^2,
+        0.0,
+    )
+    max(
+        (mass_ratio * cos(theta_lab_rad) + sqrt(discriminant)) /
+        (1 + mass_ratio),
+        0.0,
+    )
+end
+
+"""
+Fractional projectile-energy loss for a stationary target and a prescribed
+LAB projectile scattering angle, following Kallio and Barabash (2001).
+"""
+fractional_energy_loss_lab(theta_lab_rad::Real,
+                           projectile_mass_kg::Real,
+                           target_mass_kg::Real) =
+    1 - _lab_speed_ratio(
+        theta_lab_rad, projectile_mass_kg, target_mass_kg,
+    )^2
+
+"""
+Elastic collision for a stationary target with a prescribed LAB projectile
+scattering angle. Returns projectile and target LAB velocities.
+"""
+function elastic_collision_lab(projectile_velocity,
+                               projectile_mass_kg,
+                               target_mass_kg,
+                               theta_lab_rad,
+                               phi_rad)
+    speed_before = _norm(projectile_velocity)
+    speed_before > 0 || return (
+        projectile_velocity, (0.0, 0.0, 0.0),
+    )
+    speed_after = speed_before * _lab_speed_ratio(
+        theta_lab_rad, projectile_mass_kg, target_mass_kg,
+    )
+    rotated = _rotate_relative_velocity(
+        projectile_velocity, theta_lab_rad, phi_rad,
+    )
+    projectile_after = _scale(speed_after / speed_before, rotated)
+    target_after = _scale(
+        projectile_mass_kg / target_mass_kg,
+        _subtract(projectile_velocity, projectile_after),
+    )
+    projectile_after, target_after
+end

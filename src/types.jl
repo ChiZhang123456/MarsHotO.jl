@@ -21,6 +21,11 @@ struct CollisionTarget
     sigma_3eV_m2::Float64
 end
 
+struct ScatteringAngleDistribution
+    random_number::Vector{Float64}
+    theta_lab_rad::Vector{Float64}
+end
+
 mutable struct HotOParticle
     position_m::NTuple{3,Float64}
     velocity_m_s::NTuple{3,Float64}

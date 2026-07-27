@@ -1,7 +1,7 @@
 Base.@kwdef struct RahmatiMonteCarloConfig
     primary_particles::Int = 10_000
     seed::Int = 20260727
-    theta_min_rad::Float64 = deg2rad(10.0)
+    scattering_angle_path::String = DEFAULT_SCATTERING_ANGLE_PATH
     minimum_energy_eV::Float64 = 0.01
     maximum_altitude_m::Float64 = 110_000e3
     maximum_steps_per_particle::Int = 2_000_000
@@ -112,6 +112,9 @@ function run_hot_o_corona(
     macro_rate_s1 = total_source_rate_s1 / config.primary_particles
     vibration_probability, vibration_quantum_eV =
         _load_vibration(chemistry_path)
+    scattering_distribution = load_scattering_angle_distribution(
+        config.scattering_angle_path,
+    )
 
     queue = HotOParticle[]
     sizehint!(queue, min(config.primary_particles, 1_000_000))
@@ -154,8 +157,7 @@ function run_hot_o_corona(
 
             local_state = interpolate_profile(atmosphere, altitude_m)
             kappa = collision_coefficient(
-                targets, local_state.density_m3, energy_eV;
-                theta_min_rad=config.theta_min_rad,
+                targets, local_state.density_m3, energy_eV,
             )
             mfp = kappa > 0 ? inv(kappa) : Inf
             ds = rahmati_step_length(mfp)
@@ -170,17 +172,15 @@ function run_hot_o_corona(
 
             if kappa > 0 && rand(rng) < min(ds * kappa, 1.0)
                 target = choose_collision_target(
-                    rng, targets, local_state.density_m3, energy_eV;
-                    theta_min_rad=config.theta_min_rad,
+                    rng, targets, local_state.density_m3, energy_eV,
                 )
-                # Rahmati assumes the neutral target is initially at rest.
-                target_velocity = (0.0, 0.0, 0.0)
-                theta = sample_scattering_angle(
-                    rng; theta_min_rad=config.theta_min_rad,
+                theta_lab = sample_scattering_angle(
+                    rng, scattering_distribution,
                 )
-                projectile_after, target_after = elastic_collision(
-                    particle.velocity_m_s, target_velocity,
-                    O_MASS_KG, target.mass_kg, theta, sample_azimuth(rng),
+                projectile_after, target_after = elastic_collision_lab(
+                    particle.velocity_m_s,
+                    O_MASS_KG, target.mass_kg,
+                    theta_lab, sample_azimuth(rng),
                 )
                 particle.velocity_m_s = projectile_after
                 particle.collisions += 1

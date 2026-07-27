@@ -11,7 +11,7 @@ The current repository contains the Python prototype used to:
 5. Include the Martian O2+ vibrational distribution from Fox and Hać (1997).
 6. Plot MGITM profiles, discrete reaction channels, nascent energy probabilities, and spectral production rates.
 
-The Julia core reads MGITM atmospheres, samples O2+ dissociative recombination source particles, samples continuous COM scattering angles, performs exact two-body COM-to-LAB collision kinematics, and transports particles using collision optical depth and Martian gravity. Python remains responsible for input inspection, validation, analysis, and scientific plotting.
+The Julia core reads MGITM atmospheres, samples O2+ dissociative recombination source particles, samples LAB scattering angles from the MarsASPEN lookup table, performs conservative two-body collision kinematics, and transports particles using collision optical depth and Martian gravity. Python remains responsible for input inspection, validation, analysis, and scientific plotting.
 
 ## Package layout
 
@@ -27,7 +27,7 @@ test/                 Julia numerical and physics tests
 
 ## Collision physics
 
-MarsHotO samples the Rahmati fit to the Kharchenko et al. (2000) O-O differential cross section in the COM frame. The polar-angle probability includes the solid-angle Jacobian. A configurable minimum scattering angle is applied consistently to the inverse-CDF sampler and the effective total cross section. Post-collision LAB velocities conserve momentum and kinetic energy.
+MarsHotO samples the projectile LAB scattering angle from the inverse-CDF lookup table used by MarsASPEN. The table was digitized from Figure 2 of Kallio and Barabash (2001). The complete tabulated angular range is used without an additional angle cutoff. Post-collision projectile and target velocities conserve momentum and kinetic energy.
 
 物理模型的中文逐步说明见：
 
@@ -62,7 +62,7 @@ See [HOT_OXYGEN_MODEL_PLAN.md](HOT_OXYGEN_MODEL_PLAN.md) and [AGENTS.md](AGENTS.
 
 ### `examples/plot_collision_physics.py`
 
-Plots the O-O differential cross section, the normalized scattering-angle probability with one million Monte Carlo samples, fractional energy loss versus scattering angle, and total collision cross sections versus energy.
+Plots the Kallio and Barabash inverse-CDF scattering table, its Monte Carlo angle distribution, fractional energy loss versus LAB scattering angle, and total collision cross sections versus energy.
 
 ### `examples/plot_mgitm_profiles.py`
 
@@ -186,3 +186,4 @@ julia --project=. -e "using Pkg; Pkg.test()"
 1. Fox, J. L., and Hać, A. (1997), Spectrum of hot O at the exobases of the terrestrial planets, Journal of Geophysical Research, 102(A11), 24005-24011, https://doi.org/10.1029/97JA02089.
 2. Lillis, R. J., et al. (2017), Photochemical escape of oxygen from Mars: First results from MAVEN in situ data, Journal of Geophysical Research: Space Physics, 122, 3815-3836, https://doi.org/10.1002/2016JA023525.
 3. Rahmati, A. (2016), Oxygen Exosphere of Mars: Evidence from Pickup Ions Measured by MAVEN, PhD dissertation, University of Kansas.
+4. Kallio, E., and Barabash, S. (2001), Atmospheric effects of precipitating energetic hydrogen atoms on the Martian atmosphere, Journal of Geophysical Research: Space Physics, 106(A1), 165 to 177, https://doi.org/10.1029/2000JA002003.

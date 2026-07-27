@@ -1,10 +1,6 @@
 @inline kinetic_energy_eV(velocity, mass=O_MASS_KG) =
     0.5mass * _dot(velocity, velocity) / EV_J
 
-@inline function _target_thermal_velocity(rng, temperature_K, mass_kg)
-    _maxwell_velocity(rng, temperature_K, mass_kg)
-end
-
 """
 Transport one hot O particle in a spherically symmetric MGITM atmosphere.
 Collisions are sampled by optical depth. Gravity is updated at every spatial
@@ -12,7 +8,8 @@ step. Returns a named tuple with the final state and stopping reason.
 """
 function transport_particle!(rng, particle::HotOParticle,
                              atmosphere::AtmosphereProfile, targets;
-                             theta_min_rad=deg2rad(10.0),
+                             scattering_distribution=
+                                 default_scattering_angle_distribution(),
                              step_m=1000.0, lower_altitude_m=80e3,
                              upper_altitude_m=1000e3, max_steps=1_000_000)
     optical_depth_to_collision = -log(rand(rng))
@@ -33,8 +30,7 @@ function transport_particle!(rng, particle::HotOParticle,
         local_state = interpolate_profile(atmosphere, altitude)
         energy_eV = kinetic_energy_eV(velocity)
         coefficient = collision_coefficient(
-            targets, local_state.density_m3, energy_eV;
-            theta_min_rad=theta_min_rad,
+            targets, local_state.density_m3, energy_eV,
         )
         speed = _norm(velocity)
         dt = step_m / max(speed, 1.0)
@@ -46,16 +42,14 @@ function transport_particle!(rng, particle::HotOParticle,
         accumulated_depth += coefficient * step_m
         if coefficient > 0 && accumulated_depth >= optical_depth_to_collision
             target = choose_collision_target(
-                rng, targets, local_state.density_m3, energy_eV;
-                theta_min_rad=theta_min_rad,
+                rng, targets, local_state.density_m3, energy_eV,
             )
-            target_velocity = _target_thermal_velocity(
-                rng, local_state.Tn_K, target.mass_kg,
+            theta = sample_scattering_angle(
+                rng, scattering_distribution,
             )
-            theta = sample_scattering_angle(rng; theta_min_rad=theta_min_rad)
             phi = sample_azimuth(rng)
-            particle.velocity_m_s, _ = elastic_collision(
-                particle.velocity_m_s, target_velocity,
+            particle.velocity_m_s, _ = elastic_collision_lab(
+                particle.velocity_m_s,
                 O_MASS_KG, target.mass_kg, theta, phi,
             )
             particle.collisions += 1

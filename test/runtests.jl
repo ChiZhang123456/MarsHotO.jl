@@ -24,24 +24,33 @@ end
     @test total_cross_section(oxygen, 3.0) ≈ 6.4e-19
     @test total_cross_section(oxygen, 12.0) <
           total_cross_section(oxygen, 3.0)
+    density_m3 = Dict(:O => 1.0e15)
+    @test collision_coefficient(targets, density_m3, 3.0) ≈
+          1.0e15 * 6.4e-19
 end
 
 @testset "Scattering distribution" begin
-    theta_min = deg2rad(10.0)
-    @test scattering_angle_cdf(theta_min; theta_min_rad=theta_min) == 0.0
-    @test scattering_angle_cdf(pi; theta_min_rad=theta_min) == 1.0
-    @test 0.25 < angular_cross_section_fraction(theta_min) < 0.35
-    theta = range(theta_min, pi; length=100_001)
-    pdf = scattering_angle_pdf.(theta; theta_min_rad=theta_min)
-    integral = sum((pdf[1:end-1] .+ pdf[2:end]) .* diff(theta) ./ 2)
-    @test integral ≈ 1.0 atol=2e-6
-
+    distribution = load_scattering_angle_distribution(joinpath(
+        ROOT, "data", "cross_sections",
+        "scattering_angle_distribution.txt",
+    ))
+    @test first(distribution.random_number) == 0.0
+    @test last(distribution.random_number) == 1.0
+    @test issorted(distribution.random_number)
+    @test issorted(distribution.theta_lab_rad)
+    @test rad2deg(first(distribution.theta_lab_rad)) ≈ 0.12
+    @test rad2deg(last(distribution.theta_lab_rad)) ≈ 180.0
+    median_angle = scattering_angle_cdf(
+        deg2rad(0.335989), distribution,
+    )
+    @test median_angle ≈ 0.5 atol=2e-5
     rng = Xoshiro(73)
-    samples = [sample_scattering_angle(rng; theta_min_rad=theta_min)
+    samples = [sample_scattering_angle(rng, distribution)
                for _ in 1:100_000]
-    @test all(theta_min .<= samples .<= pi)
-    @test abs(sum(x <= pi / 2 for x in samples) / length(samples) -
-              scattering_angle_cdf(pi / 2; theta_min_rad=theta_min)) < 0.005
+    @test all(first(distribution.theta_lab_rad) .<= samples .<= pi)
+    empirical = sum(x <= deg2rad(1.0) for x in samples) / length(samples)
+    expected = scattering_angle_cdf(deg2rad(1.0), distribution)
+    @test abs(empirical - expected) < 0.005
 end
 
 @testset "Elastic collision" begin
@@ -58,6 +67,20 @@ end
     @test collect(after_momentum) ≈ collect(before_momentum)
     measured_loss = 1 - sum(abs2, v1_after) / sum(abs2, v1)
     @test measured_loss ≈ fractional_energy_loss(1.1, m1, m2)
+
+    theta_lab = deg2rad(42.0)
+    v1_after_lab, v2_after_lab = elastic_collision_lab(
+        v1, m1, m2, theta_lab, 2.2,
+    )
+    after_energy_lab = 0.5m1 * sum(abs2, v1_after_lab) +
+                       0.5m2 * sum(abs2, v2_after_lab)
+    after_momentum_lab =
+        ntuple(i -> m1 * v1_after_lab[i] + m2 * v2_after_lab[i], 3)
+    @test after_energy_lab ≈ before_energy rtol=1e-13
+    @test collect(after_momentum_lab) ≈ collect(before_momentum)
+    measured_loss_lab = 1 - sum(abs2, v1_after_lab) / sum(abs2, v1)
+    @test measured_loss_lab ≈
+          fractional_energy_loss_lab(theta_lab, m1, m2)
 end
 
 @testset "MGITM atmosphere" begin

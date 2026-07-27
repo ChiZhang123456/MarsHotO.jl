@@ -16,15 +16,16 @@ include("transport.jl")
 include("ensembles.jl")
 
 export AtmosphereProfile, CollisionTarget, DRBranch, HotOParticle
+export ScatteringAngleDistribution
 export MARS_RADIUS_M, O_MASS_KG, EV_J
 export load_mgitm_subsolar_profile, interpolate_profile
 export dissociative_recombination_coefficient, hot_o_production_rate
 export load_reaction_branches, load_collision_targets
 export total_cross_section, collision_coefficient, choose_collision_target
-export differential_cross_section, scattering_angle_pdf
-export angular_cross_section_fraction, scattering_angle_cdf
+export load_scattering_angle_distribution, scattering_angle_cdf
 export sample_scattering_angle, sample_azimuth
-export fractional_energy_loss, elastic_collision
+export fractional_energy_loss, fractional_energy_loss_lab
+export elastic_collision, elastic_collision_lab
 export sample_hot_o_source, transport_particle!
 export RahmatiMonteCarloConfig, HotOCoronaResult, rahmati_step_length
 export run_hot_o_corona, write_corona_distribution

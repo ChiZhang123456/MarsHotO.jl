@@ -1,85 +1,73 @@
-# MarsHotO 物理模型中文说明
+# MarsHotO 物理模型总览
 
-MarsHotO 将火星热 O 模型分成两个相互连接的部分。
+MarsHotO 由热 O 源模型和碰撞传输模型两部分组成。
 
-1. 源模型计算热 O 在什么高度产生，以及刚产生时具有多少能量。
-2. 传输模型追踪热 O 的运动、碰撞、能量损失和最终状态。
+## 1. 热 O 源模型
 
-为了避免把不同物理过程混在一起，详细说明分成以下三个文档。
+源模型读取 MGITM 的 $n_e$、$n_{\mathrm{O_2^+}}$、$T_e$ 和 $T_i$，
+计算 O2+ 解离复合产生率，抽取四个反应分支和 O2+ 振动态，并在 LAB 中生成
+热 O 的初始位置、能量和各向同性速度方向。
 
-## 1. 碰撞截面和碰撞概率
+详细说明见
+[热 O 高度和初生能量分布](HOT_O_SOURCE_MODEL_ZH.md)。
 
-[热 O 与中性大气的碰撞截面](HOT_O_CROSS_SECTIONS_ZH.md)
+## 2. 碰撞频率和靶成分
 
-这一部分回答：
+中性密度和能量相关总截面共同决定平均自由程、一步内的碰撞概率，以及发生
+碰撞时的靶成分。
 
-* MGITM 提供了哪些中性成分。
-* 碰撞截面 $\sigma_s(E)$ 是什么。
-* 如何由中性密度和碰撞截面得到平均自由程。
-* Monte Carlo 模型如何决定何时碰撞，以及与哪一种粒子碰撞。
+详细说明见
+[热 O 与中性大气的碰撞截面](HOT_O_CROSS_SECTIONS_ZH.md)。
 
-## 2. 热 O 的产生率和初始能量
+## 3. 散射角和两体运动学
 
-[热 O 高度和初生能量分布](HOT_O_SOURCE_MODEL_ZH.md)
+当前模型从 MarsASPEN 的 Kallio 与 Barabash (2001) 查找表直接抽取 LAB
+散射角，不使用 Rahmati 解析角分布，不设置 10° 截断。碰撞后速度由静止靶
+两体弹性碰撞的动量和能量守恒关系计算。
 
-这一部分回答：
+详细说明见
+[LAB 散射角与两体碰撞](HOT_O_SCATTERING_TWO_BODY_ZH.md)。
 
-* 如何由 $n_e$、$n_{\mathrm{O_2^+}}$ 和 $T_e$ 得到热 O 产生率。
-* 四个解离复合分支如何产生四个基本能量峰。
-* $T_e$ 和 $T_i$ 如何通过 Monte Carlo 速度抽样展宽能量峰。
-* $\mathrm{O_2^+}$ 振动态如何增加反应可用能量。
-* 如何得到 $p(E\mid z)$ 和 $Q(E,z)$。
-
-## 3. 散射角和两体碰撞
-
-[LAB、COM、散射角和碰撞能量损失](HOT_O_SCATTERING_TWO_BODY_ZH.md)
-
-这一部分从最基本的概念开始解释：
-
-* LAB 和 COM 分别是什么。
-* 文献中的散射角究竟是哪两个方向之间的夹角。
-* 微分碰撞截面如何转换成散射角概率。
-* 为什么小角散射损失的能量少，大角散射损失的能量多。
-* 如何由动量守恒和能量守恒计算碰撞后的两个速度。
-* 为什么 O 靶粒子可能成为次级热 O。
-
-## 4. 完整计算流程
+## 4. 完整 Monte Carlo 流程
 
 ```text
 读取 MGITM 大气和等离子体剖面
-    ↓
-计算 O₂⁺ 解离复合产生率 Q_hotO(z)
-    ↓
-抽取反应分支、振动态、电子速度和 O₂⁺ 速度
-    ↓
-计算 LAB 系中的热 O 初始位置和速度
-    ↓
-由中性密度和总碰撞截面计算平均自由程
-    ↓
-沿火星重力轨迹移动，并抽样是否发生碰撞
-    ↓
-抽取碰撞成分、COM 散射角和方位角
-    ↓
-由两体弹性碰撞关系计算碰撞后的 LAB 速度
-    ↓
-继续追踪主粒子，必要时追踪次级 O
-    ↓
-累计驻留时间，得到热 O 的 n(E,z)、n(z) 和速度分布
+    -> 计算 O2+ 解离复合产生率 Q_hotO(z)
+    -> 抽取源高度、反应分支、振动态和初生速度
+    -> 由中性密度和总截面计算平均自由程
+    -> 在火星重力下推进粒子
+    -> 抽样本步是否发生碰撞
+    -> 按 n_s sigma_s 选择靶成分
+    -> 从查找表抽取 LAB 散射角，并抽取均匀方位角
+    -> 用 LAB 两体运动学计算入射粒子和靶粒子的碰撞后速度
+    -> 继续追踪主粒子，必要时追踪次级 O
+    -> 用驻留时间估计高度和能量分布
 ```
 
-源模型的输出 $Q(E,z)$ 是传输模型的输入。碰撞截面决定碰撞频率，散射角分布和两体运动学决定每次碰撞后速度如何变化。
+源粒子按
 
-## 5. 代码和输入文件
+```math
+4\pi r^2 Q(z)\,dz
+```
 
-| 物理内容 | 文件 |
+抽样。每个初级宏粒子代表的产生率是总球对称源率除以初级粒子数。次级 O
+继承相同宏粒子率。最近日下点剖面被球对称扩展，这是当前全局计算的一项模型
+近似。
+
+## 5. 主要输入与代码
+
+| 内容 | 文件 |
 |---|---|
-| 解离复合分支和振动态 | `data/chemistry/o2plus_dissociative_recombination.toml` |
+| 解离复合与振动态 | `data/chemistry/o2plus_dissociative_recombination.toml` |
 | 总碰撞截面 | `data/cross_sections/rahmati_total_cross_sections.toml` |
-| 散射角分布 | `data/cross_sections/scattering_angle_distribution.txt` |
-| MGITM 大气 | `data/atmosphere/` |
-| 热 O 初始粒子 | `src/source_particles.jl` |
-| 单粒子传输和碰撞 | `src/transport.jl` |
+| LAB 散射角逆 CDF | `data/cross_sections/scattering_angle_distribution.txt` |
+| MGITM 大气 | `MGITM/` |
+| 初始粒子 | `src/source_particles.jl` |
+| 散射角抽样 | `src/scattering.jl` |
+| 两体碰撞 | `src/collision_kinematics.jl` |
+| 单粒子传输 | `src/transport.jl` |
 | Monte Carlo 系综 | `src/ensembles.jl` |
 | 完整示例 | `examples/run_hot_o_corona.jl` |
 
-当前模型采用 Rahmati 博士论文列出的 Monte Carlo 传输框架，并使用 Lillis 等人的热 O 源模型思路。具体采用了哪些近似，以及哪些输入还需要改进，分别写在上述三个文档中。
+Rahmati 论文仍用于传输步长、碰撞概率和终止条件等整体流程。当前修改替换的
+只是散射角概率和与该 LAB 角对应的两体碰撞计算。

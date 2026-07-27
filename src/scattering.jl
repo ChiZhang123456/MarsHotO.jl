@@ -1,51 +1,74 @@
-const RAHMATI_DCS_ALPHA_M2_SR = 0.36e-16 * 1e-4
-const RAHMATI_DCS_BETA = -1.85
+const DEFAULT_SCATTERING_ANGLE_PATH = normpath(joinpath(
+    @__DIR__, "..", "data", "cross_sections",
+    "scattering_angle_distribution.txt",
+))
+const _DEFAULT_SCATTERING_ANGLE_DISTRIBUTION =
+    Ref{Union{Nothing,ScatteringAngleDistribution}}(nothing)
 
-"""Fraction of the fitted angular cross section retained above theta_min."""
-function angular_cross_section_fraction(theta_min_rad::Real;
-                                        beta=RAHMATI_DCS_BETA)
-    0 <= theta_min_rad < pi ||
-        throw(DomainError(theta_min_rad, "Require 0 <= theta_min < pi"))
-    1 - sin(theta_min_rad / 2)^(beta + 2)
+"""
+Read the Kallio and Barabash (2001) inverse-CDF lookup table.
+
+The first column is a uniform random number and the second column is the
+projectile scattering angle in the LAB frame, in degrees.
+"""
+function load_scattering_angle_distribution(path::AbstractString)
+    random_number = Float64[]
+    theta_lab_rad = Float64[]
+    for line in eachline(path)
+        stripped = strip(line)
+        (isempty(stripped) || startswith(stripped, '#') ||
+         startswith(stripped, "random_number")) && continue
+        fields = split(stripped)
+        length(fields) >= 2 || continue
+        push!(random_number, parse(Float64, fields[1]))
+        push!(theta_lab_rad, deg2rad(parse(Float64, fields[2])))
+    end
+    length(random_number) >= 2 ||
+        error("Scattering-angle table must contain at least two rows")
+    random_number[1] = 0.0
+    issorted(random_number) ||
+        error("Scattering-angle random-number column must be sorted")
+    issorted(theta_lab_rad) ||
+        error("Scattering-angle column must be sorted")
+    isapprox(random_number[1], 0.0; atol=1e-12) ||
+        error("Scattering-angle random-number grid must start at zero")
+    isapprox(random_number[end], 1.0; atol=1e-12) ||
+        error("Scattering-angle random-number grid must end at one")
+    ScatteringAngleDistribution(random_number, theta_lab_rad)
 end
 
-"""Kharchenko O-O differential cross section fitted by Rahmati."""
-function differential_cross_section(theta_rad::Real;
-                                    alpha_m2_sr=RAHMATI_DCS_ALPHA_M2_SR,
-                                    beta=RAHMATI_DCS_BETA)
-    0 < theta_rad <= pi || throw(DomainError(theta_rad, "Require 0 < theta <= pi"))
-    alpha_m2_sr * sin(theta_rad / 2)^beta
+function default_scattering_angle_distribution()
+    if isnothing(_DEFAULT_SCATTERING_ANGLE_DISTRIBUTION[])
+        _DEFAULT_SCATTERING_ANGLE_DISTRIBUTION[] =
+            load_scattering_angle_distribution(DEFAULT_SCATTERING_ANGLE_PATH)
+    end
+    _DEFAULT_SCATTERING_ANGLE_DISTRIBUTION[]::ScatteringAngleDistribution
 end
 
-"""Normalized polar-angle PDF, including the sin(theta) solid-angle Jacobian."""
-function scattering_angle_pdf(theta_rad::Real; theta_min_rad=deg2rad(10.0),
-                              beta=RAHMATI_DCS_BETA)
-    theta_min_rad <= theta_rad <= pi || return 0.0
-    p = beta + 2
-    denominator = 1 - sin(theta_min_rad / 2)^p
-    p * sin(theta_rad / 2)^(beta + 1) * cos(theta_rad / 2) /
-        (2denominator)
+@inline function _linear_lookup(x, xp, fp)
+    x <= xp[1] && return fp[1]
+    x >= xp[end] && return fp[end]
+    index = searchsortedlast(xp, x)
+    weight = (x - xp[index]) / (xp[index + 1] - xp[index])
+    muladd(weight, fp[index + 1] - fp[index], fp[index])
 end
 
-function scattering_angle_cdf(theta_rad::Real; theta_min_rad=deg2rad(10.0),
-                              beta=RAHMATI_DCS_BETA)
-    theta_rad <= theta_min_rad && return 0.0
-    theta_rad >= pi && return 1.0
-    p = beta + 2
-    lower = sin(theta_min_rad / 2)^p
-    (sin(theta_rad / 2)^p - lower) / (1 - lower)
-end
+"""Draw one LAB scattering angle from the tabulated inverse CDF."""
+sample_scattering_angle(
+    rng=Random.default_rng(),
+    distribution::ScatteringAngleDistribution=
+        default_scattering_angle_distribution(),
+) = _linear_lookup(
+    rand(rng), distribution.random_number, distribution.theta_lab_rad,
+)
 
-"""Inverse-CDF sample of the COM polar angle."""
-function sample_scattering_angle(rng=Random.default_rng();
-                                 theta_min_rad=deg2rad(10.0),
-                                 beta=RAHMATI_DCS_BETA)
-    0 <= theta_min_rad < pi ||
-        throw(DomainError(theta_min_rad, "Require 0 <= theta_min < pi"))
-    p = beta + 2
-    p > 0 || throw(DomainError(beta, "The angular distribution is not integrable"))
-    lower = sin(theta_min_rad / 2)^p
-    2asin((lower + rand(rng) * (1 - lower))^(1 / p))
-end
+"""Return the tabulated cumulative probability at a LAB scattering angle."""
+scattering_angle_cdf(
+    theta_lab_rad::Real,
+    distribution::ScatteringAngleDistribution=
+        default_scattering_angle_distribution(),
+) = _linear_lookup(
+    theta_lab_rad, distribution.theta_lab_rad, distribution.random_number,
+)
 
 sample_azimuth(rng=Random.default_rng()) = 2pi * rand(rng)

@@ -14,10 +14,11 @@ OUTPUT = (
     ROOT / "examples" / "figures" /
     "hot_o_collision_cross_sections_and_scattering.png"
 )
+SCATTERING_FILE = (
+    ROOT / "data" / "cross_sections" /
+    "scattering_angle_distribution.txt"
+)
 
-ALPHA_CM2_SR = 0.36e-16
-BETA = -1.85
-THETA_MIN_DEG = 10.0
 PROJECTILE_MASS_AMU = 16.0
 RANDOM_SEED = 20260727
 SAMPLE_COUNT = 1_000_000
@@ -58,46 +59,31 @@ def configure_matplotlib() -> None:
     )
 
 
-def differential_cross_section(theta_rad: np.ndarray) -> np.ndarray:
-    return ALPHA_CM2_SR * np.sin(theta_rad / 2.0) ** BETA
-
-
-def angle_pdf(theta_rad: np.ndarray, theta_min_rad: float) -> np.ndarray:
-    exponent = BETA + 2.0
-    denominator = 1.0 - np.sin(theta_min_rad / 2.0) ** exponent
-    probability = (
-        exponent
-        * np.sin(theta_rad / 2.0) ** (BETA + 1.0)
-        * np.cos(theta_rad / 2.0)
-        / (2.0 * denominator)
+def load_scattering_distribution() -> tuple[np.ndarray, np.ndarray]:
+    table = np.loadtxt(
+        SCATTERING_FILE, comments="#", skiprows=8, dtype=float
     )
-    return np.where(theta_rad >= theta_min_rad, probability, 0.0)
-
-
-def sample_scattering_angle(
-    rng: np.random.Generator,
-    count: int,
-    theta_min_rad: float,
-) -> np.ndarray:
-    exponent = BETA + 2.0
-    lower = np.sin(theta_min_rad / 2.0) ** exponent
-    random_number = rng.random(count)
-    return 2.0 * np.arcsin(
-        (lower + random_number * (1.0 - lower)) ** (1.0 / exponent)
-    )
+    order = np.argsort(table[:, 0])
+    return table[order, 0], table[order, 1]
 
 
 def fractional_energy_loss(
     theta_rad: np.ndarray,
     target_mass_amu: float,
 ) -> np.ndarray:
-    return (
-        2.0
-        * PROJECTILE_MASS_AMU
-        * target_mass_amu
-        / (PROJECTILE_MASS_AMU + target_mass_amu) ** 2
-        * (1.0 - np.cos(theta_rad))
+    mass_ratio = PROJECTILE_MASS_AMU / target_mass_amu
+    discriminant = np.maximum(
+        1.0 - (mass_ratio * np.sin(theta_rad)) ** 2, 0.0
     )
+    speed_ratio = np.maximum(
+        (
+            mass_ratio * np.cos(theta_rad)
+            + np.sqrt(discriminant)
+        )
+        / (1.0 + mass_ratio),
+        0.0,
+    )
+    return 1.0 - speed_ratio**2
 
 
 def total_cross_section(
@@ -109,15 +95,13 @@ def total_cross_section(
 
 def make_figure() -> plt.Figure:
     configure_matplotlib()
-    theta_min_rad = np.deg2rad(THETA_MIN_DEG)
-    theta_deg = np.geomspace(0.1, 180.0, 2000)
+    random_grid, angle_grid_deg = load_scattering_distribution()
+    theta_deg = np.geomspace(0.12, 180.0, 2000)
     theta_rad = np.deg2rad(theta_deg)
-    theta_cut_deg = np.geomspace(THETA_MIN_DEG, 179.9, 1200)
-    theta_cut_rad = np.deg2rad(theta_cut_deg)
 
     rng = np.random.default_rng(RANDOM_SEED)
-    samples_deg = np.rad2deg(
-        sample_scattering_angle(rng, SAMPLE_COUNT, theta_min_rad)
+    samples_deg = np.interp(
+        rng.random(SAMPLE_COUNT), random_grid, angle_grid_deg
     )
 
     figure, axes = plt.subplots(
@@ -158,35 +142,34 @@ def make_figure() -> plt.Figure:
     )
     axes[0].legend(loc="best")
 
-    bin_edges_deg = np.geomspace(THETA_MIN_DEG, 180.0, 61)
-    axes[1].hist(
-        samples_deg,
-        bins=bin_edges_deg,
-        density=True,
+    bin_edges_deg = np.geomspace(0.12, 180.0, 61)
+    sampled_count, _ = np.histogram(samples_deg, bins=bin_edges_deg)
+    sampled_fraction = sampled_count / SAMPLE_COUNT
+    expected_fraction = np.diff(
+        np.interp(bin_edges_deg, angle_grid_deg, random_grid)
+    )
+    bin_center = np.sqrt(bin_edges_deg[:-1] * bin_edges_deg[1:])
+    axes[1].stairs(
+        sampled_fraction,
+        bin_edges_deg,
+        fill=True,
         color="#E07B39",
         alpha=0.55,
         label=f"Monte Carlo, N = {SAMPLE_COUNT:,}",
     )
     axes[1].plot(
-        theta_cut_deg,
-        angle_pdf(theta_cut_rad, theta_min_rad) * np.pi / 180.0,
+        bin_center,
+        expected_fraction,
         color="#222222",
         linewidth=1.3,
-        label="Analytical PDF",
-    )
-    axes[1].axvline(
-        THETA_MIN_DEG,
-        color="0.35",
-        linestyle="--",
-        linewidth=0.9,
-        label=rf"$\theta_{{\min}}={THETA_MIN_DEG:g}^\circ$",
+        label="Lookup-table probability",
     )
     axes[1].set(
         xscale="log",
         yscale="log",
-        ylim=(1.0e-5, 1.0e-1),
-        xlabel=r"COM scattering angle, $\theta$ (deg)",
-        ylabel=r"Probability density (deg$^{-1}$)",
+        ylim=(1.0e-6, 2.0e-1),
+        xlabel=r"LAB scattering angle, $\theta$ (deg)",
+        ylabel="Probability per logarithmic bin",
         title="Inverse-CDF scattering-angle sampling",
     )
     axes[1].legend(loc="best")
@@ -211,13 +194,10 @@ def make_figure() -> plt.Figure:
             linewidth=1.3,
             label=species,
         )
-    axes[2].axvline(
-        THETA_MIN_DEG, color="0.35", linestyle="--", linewidth=0.9
-    )
     axes[2].set(
         xlim=(0.0, 180.0),
         ylim=(0.0, 1.02),
-        xlabel=r"COM scattering angle, $\theta$ (deg)",
+        xlabel=r"LAB scattering angle, $\theta$ (deg)",
         ylabel=r"Fractional energy loss, $\Delta E/E$",
         title="Elastic energy transfer",
     )
@@ -237,7 +217,7 @@ def make_figure() -> plt.Figure:
         axis.grid(True, which="both", color="0.91", linewidth=0.5)
 
     figure.suptitle(
-        r"Hot O collision physics, $\theta_{\min}=10^\circ$",
+        "Hot O collision physics with Kallio and Barabash angle sampling",
         fontsize=10,
     )
     return figure

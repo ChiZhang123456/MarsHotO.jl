@@ -13,19 +13,15 @@ function total_cross_section(target::CollisionTarget, energy_eV::Real)
     target.sigma_3eV_m2 * (energy_eV / 3)^(-0.2)
 end
 
-function collision_coefficient(targets, density_m3, energy_eV;
-                               theta_min_rad=0.0)
-    angular_fraction = angular_cross_section_fraction(theta_min_rad)
+function collision_coefficient(targets, density_m3, energy_eV)
     sum(get(density_m3, target.species, 0.0) *
-        total_cross_section(target, energy_eV) * angular_fraction
+        total_cross_section(target, energy_eV)
         for target in targets)
 end
 
-function choose_collision_target(rng, targets, density_m3, energy_eV;
-                                 theta_min_rad=0.0)
-    angular_fraction = angular_cross_section_fraction(theta_min_rad)
+function choose_collision_target(rng, targets, density_m3, energy_eV)
     weights = [get(density_m3, target.species, 0.0) *
-               total_cross_section(target, energy_eV) * angular_fraction
+               total_cross_section(target, energy_eV)
                for target in targets]
     total = sum(weights)
     total > 0 || return nothing
