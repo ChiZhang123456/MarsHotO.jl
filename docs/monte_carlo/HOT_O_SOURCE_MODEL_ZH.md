@@ -108,88 +108,118 @@ Monte Carlo 不是为了计算总产生率。总产生率由密度和反应系�
 =0.
 ```
 
-温度只决定相对于零整体速度的热运动。按照当前指定的源模型，电子和 $\mathrm{O_2^+}$ 的非负热能使用以零能量为峰值的半高斯分布：
+温度只决定相对于零整体速度的热运动。电子和 $\mathrm{O_2^+}$ 都使用归一化
+的三维 Maxwellian 速度分布：
+
+```math
+f_s(\mathbf v\mid T_s)
+=
+\left(\frac{m_s}{2\pi k_{\mathrm B}T_s}\right)^{3/2}
+\exp\left[
+-\frac{m_s|\mathbf v-\mathbf u_s|^2}
+{2k_{\mathrm B}T_s}
+\right].
+```
+
+这里 $\mathbf u_s$ 是整体速度。当前电子和 $\mathrm{O_2^+}$ 均设置为
+
+```math
+\mathbf u_s=(0,0,0).
+```
+
+该概率密度在完整三维速度空间中的积分为 1：
+
+```math
+\int_{\mathbb R^3}
+f_s(\mathbf v\mid T_s)\,d^3v=1.
+```
+
+如果使用物理数密度形式 $n_sf_s$，其速度空间积分为 $n_s$。源粒子的 Monte
+Carlo 只需要归一化概率分布，所以抽样本身不乘数密度。数密度已经包含在
+$Q_{\mathrm{hotO}}(z)$ 和宏粒子权重中。
+
+MarsHotO 使用与 TestParticle.jl 相同的热速度约定：
+
+```math
+v_{\mathrm{th},s}
+=
+\sqrt{\frac{2k_{\mathrm B}T_s}{m_s}}.
+```
+
+这对应 TestParticle.jl 的构造方式：
+
+```julia
+u_bulk = [0.0, 0.0, 0.0]
+p = n * kB * T
+vdf = TP.Maxwellian(u_bulk, p, n; m=mass)
+```
+
+MarsHotO 不需要依赖 TestParticle.jl，包内的
+`sample_maxwellian_velocity` 使用相同的数学定义直接完成抽样。
+
+每个笛卡尔速度分量的标准差为
+
+```math
+\sigma_{v,s}
+=
+\frac{v_{\mathrm{th},s}}{\sqrt{2}}
+=
+\sqrt{\frac{k_{\mathrm B}T_s}{m_s}}.
+```
+
+因此，对每一种反应物分别抽取三个独立标准正态随机数：
+
+```math
+\xi_x,\xi_y,\xi_z\sim\mathcal N(0,1),
+```
+
+并计算
+
+```math
+\mathbf v_s
+=
+\mathbf u_s
++
+\sqrt{\frac{k_{\mathrm B}T_s}{m_s}}
+(\xi_x,\xi_y,\xi_z).
+```
+
+当 $\mathbf u_s=0$ 时，三个分量具有相同方差，所以所得三维分布是各向同性的。
+速度方向会自然覆盖整个球面，不需要另外抽取极角和方位角。
+
+对应的速度大小概率密度为
+
+```math
+P_s(v)
+=
+4\pi v^2
+\left(\frac{m_s}{2\pi k_{\mathrm B}T_s}\right)^{3/2}
+\exp\left(-\frac{m_sv^2}{2k_{\mathrm B}T_s}\right),
+\qquad v\ge0.
+```
+
+总动能概率密度为
 
 ```math
 p_s(E\mid T_s)
 =
-\sqrt{\frac{2}{\pi}}
-\frac{1}{\sigma_{E,s}}
-\exp\left[-\frac{E^2}{2\sigma_{E,s}^2}\right],
+\frac{2}{\sqrt{\pi}}
+\frac{\sqrt{E}}{(k_{\mathrm B}T_s)^{3/2}}
+\exp\left(-\frac{E}{k_{\mathrm B}T_s}\right),
 \qquad E\ge0.
 ```
 
-其中电子和 $\mathrm{O_2^+}$ 的能量宽度分别由各自温度控制：
+它满足
 
 ```math
-\sigma_{E,e}=k_{\mathrm B}T_e,
+\int_0^\infty p_s(E\mid T_s)\,dE=1,
 \qquad
-\sigma_{E,i}=k_{\mathrm B}T_i.
+\langle E_s\rangle=\frac{3}{2}k_{\mathrm B}T_s.
 ```
 
-该分布满足
+300 K 条件下的速度分量、总动能和方向余弦抽样见下图：
 
-```math
-p_s(0\mid T_s)
-=
-\sqrt{\frac{2}{\pi}}\frac{1}{k_{\mathrm B}T_s},
-```
-
-所以概率密度峰值严格位于 $E=0$。平均热能为
-
-```math
-\langle E_s\rangle
-=
-\sqrt{\frac{2}{\pi}}k_{\mathrm B}T_s.
-```
-
-需要说明，该半高斯能量分布是当前模型采用的指定近似，不是标准三维 Maxwell-Boltzmann 总动能分布。
-
-对电子和 $\mathrm{O_2^+}$ 分别进行以下抽样：
-
-1. 抽取标准正态随机数 $\xi_s\sim\mathcal N(0,1)$。
-2. 计算非负热能：
-
-```math
-E_s=\left|\xi_s\right|k_{\mathrm B}T_s.
-```
-
-3. 由质量 $m_s$ 计算速度大小：
-
-```math
-v_s=\sqrt{\frac{2E_s}{m_s}}.
-```
-
-4. 速度方向与能量独立，并在整个球面上各向同性抽取：
-
-```math
-\mu=\cos\theta=2u_1-1,
-\qquad
-\varphi=2\pi u_2,
-```
-
-其中 $u_1$ 和 $u_2$ 是区间 $[0,1)$ 上的均匀随机数。
-
-因此，速度为
-
-```math
-\mathbf v
-=v\left(
-\sqrt{1-\mu^2}\cos\varphi,
-\sqrt{1-\mu^2}\sin\varphi,
-\mu
-\right).
-```
-
-如果用单个均匀随机分位数 $u$ 表示能量抽样，则有
-
-```math
-E=F_E^{-1}(u),
-```
-
-其中 $F_E$ 是半高斯能量分布的累积分布函数。300 K 条件下的能量概率和随机分位数至能量映射见下图：
-
-![300 K 半高斯热能随机抽样](../../examples/figures/thermal_energy_sampling_300K.png)
+![300 K Maxwellian 速度抽样](../../examples/figures/thermal_energy_sampling_300K.png)
 
 电子质量远小于 $\mathrm{O_2^+}$ 质量，所以相同温度和相同动能下电子速度更大。分别抽到 $\mathbf v_e$ 和 $\mathbf v_i$ 后，反应物质心速度为
 

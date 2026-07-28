@@ -80,8 +80,8 @@ Plots O2+ density, neutral/ion/electron temperatures, and hot O production rate 
 
 ### `examples/shared/plot_thermal_energy_sampling.py`
 
-Plots the configured 300 K zero-mode half-normal kinetic-energy probability
-density and the inverse-CDF mapping from a uniform random quantile to energy.
+Plots normalized 300 K Maxwellian velocity-component and kinetic-energy
+probability densities together with the isotropic direction-cosine distribution.
 
 ### Complete Rahmati Monte Carlo example
 
@@ -122,8 +122,8 @@ Calculates and plots:
 
 The calculation currently includes:
 
-1. Zero-mode half-normal electron energies with width $k_B T_e$
-2. Zero-mode half-normal O2+ energies with width $k_B T_i$
+1. Zero-bulk three-dimensional Maxwellian electron velocities at $T_e$
+2. Zero-bulk three-dimensional Maxwellian O2+ velocities at $T_i$
 3. Center-of-mass two-body kinematics
 4. Isotropic product directions
 5. The Fox and Hać (1997) Mars O2+ vibrational distribution

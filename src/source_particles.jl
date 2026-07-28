@@ -1,20 +1,73 @@
 """
 Photochemical source-particle sampling.
 
-Electron and O2+ bulk velocities are zero. Their nonnegative thermal energies
-use the configured zero-mode half-normal approximation with sigma_E=kB*T.
-Thermal directions, reaction branch, vibration, and product direction are
-sampled independently.
+Electron and O2+ velocities are sampled from normalized three-dimensional
+Maxwellian distributions. Their default bulk velocities are zero. Reaction
+branch, vibration, and product direction are sampled independently.
 """
 
 """
-Sample nonnegative thermal energy from the configured zero-mode half-normal
-model, with energy width sigma_E = kB*T.
+Most-probable thermal speed used by the Maxwellian convention.
+
+This equals sqrt(2*kB*T/m), matching the TestParticle.jl Maxwellian
+parameterization.
 """
-function _sample_thermal_energy_J(rng, temperature_K)
+function maxwellian_thermal_speed(temperature_K::Real, mass_kg::Real)
     temperature_K > 0 ||
         throw(DomainError(temperature_K, "Temperature must be positive"))
-    abs(randn(rng)) * BOLTZMANN_J_K * temperature_K
+    mass_kg > 0 || throw(DomainError(mass_kg, "Mass must be positive"))
+    sqrt(2BOLTZMANN_J_K * temperature_K / mass_kg)
+end
+
+"""
+Normalized three-dimensional Maxwellian velocity PDF in SI units.
+
+The returned probability density has units s^3 m^-3 and integrates to one
+over all velocity space.
+"""
+function maxwellian_velocity_pdf(
+    velocity_m_s,
+    temperature_K::Real,
+    mass_kg::Real;
+    bulk_velocity_m_s=(0.0, 0.0, 0.0),
+)
+    length(velocity_m_s) == 3 ||
+        throw(DimensionMismatch("Velocity must have three components"))
+    length(bulk_velocity_m_s) == 3 ||
+        throw(DimensionMismatch("Bulk velocity must have three components"))
+    temperature_K > 0 ||
+        throw(DomainError(temperature_K, "Temperature must be positive"))
+    mass_kg > 0 || throw(DomainError(mass_kg, "Mass must be positive"))
+
+    variance_m2_s2 = BOLTZMANN_J_K * temperature_K / mass_kg
+    relative_speed_squared = sum(
+        (velocity_m_s[i] - bulk_velocity_m_s[i])^2 for i in 1:3
+    )
+    exp(-relative_speed_squared / (2variance_m2_s2)) /
+        (2pi * variance_m2_s2)^(3 / 2)
+end
+
+"""
+Sample a three-dimensional Maxwellian velocity.
+
+Each Cartesian component is Gaussian with mean equal to the corresponding
+bulk velocity and variance kB*T/m. The resulting direction is isotropic when
+the bulk velocity is zero.
+"""
+function sample_maxwellian_velocity(
+    rng,
+    temperature_K::Real,
+    mass_kg::Real;
+    bulk_velocity_m_s=(0.0, 0.0, 0.0),
+)
+    length(bulk_velocity_m_s) == 3 ||
+        throw(DimensionMismatch("Bulk velocity must have three components"))
+    thermal_speed = maxwellian_thermal_speed(temperature_K, mass_kg)
+    component_sigma = thermal_speed / sqrt(2)
+    ntuple(
+        i -> Float64(bulk_velocity_m_s[i]) + component_sigma * randn(rng),
+        3,
+    )
 end
 
 """Sample an isotropic unit vector independently of particle energy."""
@@ -27,17 +80,6 @@ end
         transverse * sin(azimuth),
         mu,
     )
-end
-
-"""
-Sample a zero-bulk-velocity particle by drawing its kinetic energy from the
-configured zero-mode half-normal model and its direction isotropically.
-"""
-function _sample_thermal_velocity(rng, temperature_K, mass_kg)
-    mass_kg > 0 || throw(DomainError(mass_kg, "Mass must be positive"))
-    energy_J = _sample_thermal_energy_J(rng, temperature_K)
-    speed_m_s = sqrt(2energy_J / mass_kg)
-    _scale(speed_m_s, _sample_isotropic_direction(rng))
 end
 
 function _weighted_index(rng, probability)
@@ -57,10 +99,9 @@ direction are sampled explicitly.
 function sample_hot_o_source(rng, position_m, Te_K, Ti_K, branches;
                              vibrational_probability=[1.0],
                              vibrational_quantum_eV=0.23)
-    # Both reactants have zero prescribed bulk velocity. Their thermal
-    # energies and isotropic directions are sampled independently.
-    ve = _sample_thermal_velocity(rng, Te_K, ELECTRON_MASS_KG)
-    vi = _sample_thermal_velocity(rng, Ti_K, O2P_MASS_KG)
+    # Both reactants use normalized Maxwellians with zero bulk velocity.
+    ve = sample_maxwellian_velocity(rng, Te_K, ELECTRON_MASS_KG)
+    vi = sample_maxwellian_velocity(rng, Ti_K, O2P_MASS_KG)
     total_mass = ELECTRON_MASS_KG + O2P_MASS_KG
     vcom = _scale(1 / total_mass,
         _add(_scale(ELECTRON_MASS_KG, ve), _scale(O2P_MASS_KG, vi)))

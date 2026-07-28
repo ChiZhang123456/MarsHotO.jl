@@ -16,13 +16,33 @@ const ROOT = normpath(joinpath(@__DIR__, ".."))
     @test getfield.(branches, :probability) == [0.265, 0.473, 0.204, 0.058]
 end
 
-@testset "Zero-mode thermal source sampling" begin
-    rng = Xoshiro(73)
+@testset "Maxwellian thermal source sampling" begin
     temperature_K = 300.0
-    sample_count = 100_000
+    mass_kg = O_MASS_KG
+    thermal_speed = maxwellian_thermal_speed(temperature_K, mass_kg)
+    component_variance =
+        MarsHotO.BOLTZMANN_J_K * temperature_K / mass_kg
+
+    speed_grid = range(0.0, 10thermal_speed; length=200_001)
+    speed_pdf = [
+        4pi * speed^2 * maxwellian_velocity_pdf(
+            (speed, 0.0, 0.0), temperature_K, mass_kg,
+        )
+        for speed in speed_grid
+    ]
+    normalization = sum(
+        (speed_pdf[i] + speed_pdf[i + 1]) / 2
+        for i in 1:(length(speed_pdf) - 1)
+    ) * step(speed_grid)
+    @test normalization ≈ 1.0 atol=1e-10
+
+    bulk_velocity = (120.0, -45.0, 30.0)
+    rng = Xoshiro(73)
+    sample_count = 200_000
     velocities = [
-        MarsHotO._sample_thermal_velocity(
-            rng, temperature_K, O_MASS_KG,
+        sample_maxwellian_velocity(
+            rng, temperature_K, mass_kg;
+            bulk_velocity_m_s=bulk_velocity,
         )
         for _ in 1:sample_count
     ]
@@ -30,16 +50,40 @@ end
         sum(velocity[component] for velocity in velocities) / sample_count
         for component in 1:3
     ]
-    thermal_speed = sqrt(
-        MarsHotO.BOLTZMANN_J_K * temperature_K / O_MASS_KG,
+    component_sigma = sqrt(component_variance)
+    @test all(
+        abs.(mean_velocity .- collect(bulk_velocity)) .<
+        0.01component_sigma
     )
-    @test all(abs.(mean_velocity) .< 0.015thermal_speed)
+    sampled_component_variance = [
+        sum(
+            (velocity[component] - bulk_velocity[component])^2
+            for velocity in velocities
+        ) / sample_count
+        for component in 1:3
+    ]
+    @test all(
+        isapprox.(sampled_component_variance, component_variance; rtol=0.01)
+    )
     sampled_mean_energy = sum(
-        0.5O_MASS_KG * sum(abs2, velocity) for velocity in velocities
+        0.5mass_kg * sum(
+            (velocity[component] - bulk_velocity[component])^2
+            for component in 1:3
+        )
+        for velocity in velocities
     ) / sample_count
     expected_mean_energy =
-        sqrt(2 / pi) * MarsHotO.BOLTZMANN_J_K * temperature_K
+        1.5 * MarsHotO.BOLTZMANN_J_K * temperature_K
     @test sampled_mean_energy ≈ expected_mean_energy rtol=0.01
+
+    rng1 = Xoshiro(20260728)
+    rng2 = Xoshiro(20260728)
+    @test sample_maxwellian_velocity(rng1, temperature_K, mass_kg) ==
+          sample_maxwellian_velocity(rng2, temperature_K, mass_kg)
+    @test_throws DomainError maxwellian_thermal_speed(0.0, mass_kg)
+    @test_throws DomainError maxwellian_velocity_pdf(
+        (0.0, 0.0, 0.0), temperature_K, -mass_kg,
+    )
 end
 
 @testset "Cross sections" begin

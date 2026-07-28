@@ -4,11 +4,10 @@ This script creates:
 1. A Lillis Figure 1 style conditional energy probability map.
 2. A Rahmati Figure 2.4 style spectral production rate map.
 
-The electron and O2+ bulk velocities are zero. Their nonnegative kinetic
-energies are sampled from the configured zero-mode half-normal model with
-sigma_E = kB*T. Velocity directions are sampled independently and
-isotropically. Collisions with the neutral atmosphere are not part of these
-source maps.
+The electron and O2+ bulk velocities are zero. Their velocities are sampled
+from normalized three-dimensional Maxwellian distributions. Isotropy follows
+from the equal Gaussian variance of all three Cartesian components. Collisions
+with the neutral atmosphere are not part of these source maps.
 """
 
 from pathlib import Path
@@ -86,27 +85,25 @@ def sample_maxwellian_velocity(
     temperature_k: float,
     mass_kg: float,
     sample_count: int,
+    bulk_velocity_ms: np.ndarray | None = None,
 ) -> np.ndarray:
-    """Sample zero-bulk velocities using half-normal energy plus direction."""
-    kinetic_energy_j = np.abs(
-        rng.normal(
-            loc=0.0,
-            scale=BOLTZMANN_JK * temperature_k,
-            size=sample_count,
-        )
+    """Sample a normalized three-dimensional Maxwellian velocity."""
+    if temperature_k <= 0.0:
+        raise ValueError("Temperature must be positive")
+    if mass_kg <= 0.0:
+        raise ValueError("Mass must be positive")
+    if bulk_velocity_ms is None:
+        bulk_velocity_ms = np.zeros(3)
+    bulk_velocity_ms = np.asarray(bulk_velocity_ms, dtype=float)
+    if bulk_velocity_ms.shape != (3,):
+        raise ValueError("Bulk velocity must contain three components")
+
+    component_sigma_ms = np.sqrt(BOLTZMANN_JK * temperature_k / mass_kg)
+    return rng.normal(
+        loc=bulk_velocity_ms,
+        scale=component_sigma_ms,
+        size=(sample_count, 3),
     )
-    speed_ms = np.sqrt(2.0 * kinetic_energy_j / mass_kg)
-    cosine_polar = rng.uniform(-1.0, 1.0, size=sample_count)
-    azimuth = rng.uniform(0.0, 2.0 * np.pi, size=sample_count)
-    sine_polar = np.sqrt(np.maximum(1.0 - cosine_polar**2, 0.0))
-    direction = np.column_stack(
-        (
-            sine_polar * np.cos(azimuth),
-            sine_polar * np.sin(azimuth),
-            cosine_polar,
-        )
-    )
-    return speed_ms[:, None] * direction
 
 
 def sample_nascent_o_energies(

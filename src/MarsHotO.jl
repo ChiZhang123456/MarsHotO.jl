@@ -36,6 +36,8 @@ export sample_scattering_angle, sample_azimuth
 export fractional_energy_loss, fractional_energy_loss_lab
 export maximum_lab_scattering_angle
 export elastic_collision, elastic_collision_lab
+export maxwellian_thermal_speed, maxwellian_velocity_pdf
+export sample_maxwellian_velocity
 export sample_hot_o_source, transport_particle!
 export RahmatiMonteCarloConfig, HotOCoronaResult, rahmati_step_length
 export run_hot_o_corona, write_corona_distribution
