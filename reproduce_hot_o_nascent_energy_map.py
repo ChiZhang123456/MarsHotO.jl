@@ -294,7 +294,7 @@ def make_combined_figure(
             float(altitude_km[-1]),
         ),
         interpolation=PLOT_INTERPOLATION,
-        cmap="viridis",
+        cmap="turbo",
         vmin=0.0,
         vmax=float(np.percentile(positive_values, 99.5)),
         rasterized=True,
