@@ -1,207 +1,183 @@
-# LAB 散射角与两体碰撞
+# COM 散射角与两体碰撞
 
-## 1. 当前模型采用什么角分布
+## 1. 当前角度分布约定
 
-当前模型直接读取
-`data/cross_sections/scattering_angle_distribution.txt`。这个文件来自
-MarsASPEN，原始数据由 Kallio 与 Barabash (2001) 的 Figure 2 数字化得到。
-表中两列分别是：
+MarsHotO 读取
+`data/cross_sections/scattering_angle_distribution.txt`。这个查找表来自
+MarsASPEN，并由 Kallio 与 Barabash (2001) 的图数字化得到。
 
-1. 0 到 1 之间的累积概率，也可以看成均匀随机数 $U$。
-2. 入射粒子在 LAB 中的散射角 $\Theta_{\mathrm{LAB}}$，单位为度。
+原始查找表把第二列标记为 H 或 H ENA 的 LAB 散射角。当前 MarsHotO 按照模型
+约定，将这些角度数值直接作为热 O 碰撞的经验 COM 散射角使用。这是一项明确
+的经验近似，不表示 Kallio 原文把该角度定义为 COM。
 
-因此它本身就是一个逆累积分布表。抽样过程为
+表格是一个逆累积分布：
 
 ```math
 U\sim\mathcal U(0,1),
 ```
 
 ```math
-\Theta_{\mathrm{LAB}}=F^{-1}(U).
+\theta_{\mathrm{COM}}=F^{-1}(U).
 ```
 
-程序在表格相邻点之间进行线性插值。方位角独立抽取：
+程序在表格相邻点之间进行线性插值。表中角度约为 $0.12^\circ$ 到
+$180^\circ$。不设置人为的最小角度截断。方位角独立抽取：
 
 ```math
 \phi=2\pi U_\phi,\qquad U_\phi\sim\mathcal U(0,1).
 ```
 
-表中最小角约为 $0.12^\circ$，最大角为 $180^\circ$。程序不设置人为的最小
-角度截断。抽到的角度还必须满足对应碰撞对的 LAB 两体运动学范围。对于
-O 撞 O，最大可达 LAB 角为 $90^\circ$，因此程序使用查找表在
-$0.12^\circ$ 到 $90^\circ$ 范围内的条件分布。对于当前质量比下的 O 撞
-CO、N2、O2 和 CO2，完整的 $180^\circ$ 范围均可达。
+## 2. LAB 和 COM 分别是什么
 
-## 2. LAB 是什么
+LAB 是相对火星静止的坐标系。热 O 的位置、速度、重力轨迹和最终输出都在
+LAB 中描述。
 
-LAB 就是相对火星静止的坐标系。MGITM 的高度、热 O 的速度、火星重力和
-最终输出的能量都在这个坐标系中描述。
+COM 是两个碰撞粒子的质心参考系。碰撞前的质心速度为
 
-碰撞前，入射热 O 的速度为 $\mathbf v_1$。Rahmati 传输流程采用静止靶近似，
-所以背景中性粒子的碰撞前速度设为零：
+```math
+\mathbf V_{\mathrm{COM}}
+=
+\frac{m_1\mathbf v_1+m_2\mathbf v_2}
+{m_1+m_2}.
+```
+
+当前模型采用静止靶近似：
 
 ```math
 \mathbf v_2=0.
 ```
 
-当前查找表给出的 $\Theta_{\mathrm{LAB}}$ 是 $\mathbf v_1$ 与碰撞后入射粒子
-速度 $\mathbf v_1'$ 之间的夹角：
+相对速度为
 
 ```math
-\cos\Theta_{\mathrm{LAB}}
+\mathbf g=\mathbf v_1-\mathbf v_2.
+```
+
+模型抽取的 $\theta_{\mathrm{COM}}$ 是碰撞前后相对速度方向的夹角：
+
+```math
+\cos\theta_{\mathrm{COM}}
 =
-\frac{\mathbf v_1\cdot\mathbf v_1'}
-{|\mathbf v_1||\mathbf v_1'|}.
+\frac{\mathbf g\cdot\mathbf g'}
+{|\mathbf g||\mathbf g'|}.
 ```
 
-这里的角度不是 COM 散射角。程序不会先把它当作 COM 角，再转换回 LAB。
+## 3. Ali Rahmati 的能量损失公式
 
-## 3. 随机角度如何变成新的速度方向
-
-首先定义入射方向：
+Rahmati 博士论文第 2.2.4 节公式 2.19 给出入射热 O 的相对能量损失：
 
 ```math
-\hat{\mathbf e}_0=\frac{\mathbf v_1}{|\mathbf v_1|}.
-```
-
-再构造两个与 $\hat{\mathbf e}_0$ 垂直的单位向量
-$\hat{\mathbf e}_1$ 和 $\hat{\mathbf e}_2$。碰撞后的入射粒子方向为
-
-```math
-\hat{\mathbf e}'
+\boxed{
+\frac{\Delta E}{E}
 =
-\cos\Theta_{\mathrm{LAB}}\,\hat{\mathbf e}_0
-+
-\sin\Theta_{\mathrm{LAB}}
-\left(
-\cos\phi\,\hat{\mathbf e}_1
-+
-\sin\phi\,\hat{\mathbf e}_2
-\right).
-```
-
-这个步骤只确定方向。碰撞后的速率还要由两体弹性碰撞关系计算。
-
-## 4. LAB 角对应的碰撞后速率
-
-设入射热 O 的质量为 $m_1$，静止靶粒子的质量为 $m_2$，并定义
-
-```math
-r=\frac{m_1}{m_2}.
-```
-
-对于当前模型中的 O 撞击 O、CO、N2、O2 和 CO2，均有 $m_1\le m_2$。
-入射粒子碰撞后的速率比为
-
-```math
-\frac{v_1'}{v_1}
-=
-\frac{
-r\cos\Theta_{\mathrm{LAB}}
-+
-\sqrt{1-r^2\sin^2\Theta_{\mathrm{LAB}}}
+\frac{2m_1m_2}{(m_1+m_2)^2}
+\left(1-\cos\theta_{\mathrm{COM}}\right)
 }
-{1+r}.
 ```
 
-因此
+其中：
+
+* $m_1$ 是入射热 O 的质量。
+* $m_2$ 是靶中性粒子的质量。
+* $\theta_{\mathrm{COM}}$ 是 COM 散射角。
+
+当前代码把查找表抽到的角度直接代入这个公式，不再把它当作 LAB 角，也不进行
+LAB 到 COM 的角度转换。
+
+对于 O 撞 O，$m_1=m_2$，所以
+
+```math
+\frac{\Delta E}{E}
+=
+\frac12\left(1-\cos\theta_{\mathrm{COM}}\right)
+=
+\sin^2\left(\frac{\theta_{\mathrm{COM}}}{2}\right).
+```
+
+因此：
+
+| COM 角 | $\Delta E/E$ |
+|---:|---:|
+| $0^\circ$ | 0 |
+| $60^\circ$ | 0.25 |
+| $90^\circ$ | 0.50 |
+| $120^\circ$ | 0.75 |
+| $180^\circ$ | 1.00 |
+
+这与把同一数值解释成 LAB 角完全不同。现在 O 撞 O 的角度可以覆盖整个
+$0^\circ$ 到 $180^\circ$ COM 范围。
+
+## 4. 如何计算碰撞后的两个速度
+
+首先围绕碰撞前相对速度方向旋转 $\theta_{\mathrm{COM}}$ 和 $\phi$，得到
+$\mathbf g'$。弹性碰撞满足
+
+```math
+|\mathbf g'|=|\mathbf g|.
+```
+
+然后转换回 LAB：
 
 ```math
 \mathbf v_1'
 =
-v_1
-\frac{
-r\cos\Theta_{\mathrm{LAB}}
+\mathbf V_{\mathrm{COM}}
 +
-\sqrt{1-r^2\sin^2\Theta_{\mathrm{LAB}}}
-}
-{1+r}
-\hat{\mathbf e}'.
+\frac{m_2}{m_1+m_2}\mathbf g',
 ```
-
-靶粒子的反冲速度由动量守恒得到：
 
 ```math
 \mathbf v_2'
 =
-\frac{m_1}{m_2}
-\left(\mathbf v_1-\mathbf v_1'\right).
+\mathbf V_{\mathrm{COM}}
+-
+\frac{m_1}{m_1+m_2}\mathbf g'.
 ```
 
-代码测试以下两个守恒关系：
+这些公式同时保证动量守恒
 
 ```math
-m_1\mathbf v_1
+m_1\mathbf v_1+m_2\mathbf v_2
 =
 m_1\mathbf v_1'+m_2\mathbf v_2',
 ```
 
+以及总动能守恒
+
 ```math
-\frac12m_1v_1^2
+\frac12m_1v_1^2+\frac12m_2v_2^2
 =
 \frac12m_1v_1'^2+\frac12m_2v_2'^2.
 ```
 
-所以入射热 O 损失的能量正好成为靶粒子的反冲能量。
+热 O 损失的动能全部转移给靶粒子。
 
-当 $m_1=m_2$ 时，非零速度入射粒子的 LAB 偏转角不能超过 $90^\circ$。
-在 $90^\circ$ 时，原入射粒子停止，全部动能转移给靶粒子。因此
-$90^\circ$ 以后不存在可继续定义方向的入射粒子速度，不能把那一段画成
-持续的 100% 能量损失曲线。
+## 5. 次级热 O
 
-## 5. 能量损失如何由散射角决定
+如果靶粒子是 O，碰撞后的 $\mathbf v_2'$ 属于另一个 O 原子。如果它的能量
+高于最低追踪能量，程序把它作为次级热 O 加入待追踪队列。次级 O 继承相同的
+宏粒子权重。
 
-Kallio 查找表给出的是 LAB 偏转角，而 Rahmati 博士论文公式 2.19 使用的是
-COM 散射角。因此程序首先进行角度转换：
+## 6. 一次碰撞的计算顺序
 
-```math
-\theta_{\mathrm{COM}}
-=
-\theta_{\mathrm{LAB}}
-+
-\arcsin\left(
-\frac{m_1}{m_2}\sin\theta_{\mathrm{LAB}}
-\right).
-```
-
-然后使用 Rahmati 公式计算入射热 O 的能量损失：
-
-```math
-\frac{\Delta E_1}{E_1}
-=
-\frac{2m_1m_2}{(m_1+m_2)^2}
-\left(1-\cos\theta_{\mathrm{COM}}\right).
-```
-
-这个结果与前一节的严格 LAB 两体速度公式完全等价。LAB 角不能直接代入
-Rahmati 公式，必须先转换为 COM 角。
-
-小角度散射通常只引起很小的方向改变和能量损失。大角度散射通常会把更多
-能量传给靶粒子。不同靶质量对应不同的能量损失曲线。
-
-特别地，当热 O 撞击静止 O 时，$m_1=m_2$。如果靶 O 获得的反冲能量高于
-最低追踪能量，它会作为次级热 O 加入粒子队列，并继承相同的宏粒子权重。
-
-## 6. 一次碰撞的完整 Monte Carlo 顺序
-
-1. 用中性密度和总截面判断本步是否发生碰撞。
+1. 用中性密度和总截面判断是否发生碰撞。
 2. 按 $n_s\sigma_s$ 选择靶成分。
-3. 抽取 $U$，从查找表的运动学可达范围得到 LAB 散射角。
+3. 从 Kallio 查找表抽取一个数值，并将其解释为
+   $\theta_{\mathrm{COM}}$。
 4. 独立抽取方位角 $\phi$。
-5. 用 LAB 两体公式计算入射粒子的碰撞后速率。
-6. 旋转入射方向，得到 $\mathbf v_1'$。
-7. 用动量守恒计算靶粒子的反冲速度 $\mathbf v_2'$。
-8. 在 LAB 中继续追踪入射热 O。
-9. 如果靶粒子是 O，则按需要继续追踪次级热 O。
+5. 在 COM 中旋转相对速度。
+6. 转换回 LAB，得到入射粒子和靶粒子的碰撞后速度。
+7. 在 LAB 中继续追踪入射热 O。
+8. 如果靶粒子是 O，则按需要继续追踪次级热 O。
 
-## 7. 当前近似与适用范围
+## 7. 模型近似
 
-Kallio 与 Barabash (2001) 的角分布针对火星大气中的高能 H 或 H ENA。当前
-模型按照用户指定，将同一经验逆累积分布用于热 O 与所有中性成分的碰撞。
-这是一个明确的模型近似，并不是 O 与各中性成分的专属微分截面。
+Kallio 与 Barabash (2001) 的原始分布描述高能 H 或 H ENA，并且原表标记为
+LAB 角。当前模型把相同数值作为热 O 的 COM 角使用，目的是与 Rahmati 的
+COM 能量损失公式和 COM 两体运动学直接结合。
 
-后续如果获得 O 与 CO2、O、N2、CO 和 O2 各自的能量相关微分截面，应分别
-建立角度和能量相关的散射表，替换当前共同分布。
+未来获得 O 与 CO2、O、N2、CO 和 O2 各自的微分截面后，应使用专属的
+COM 角分布替换当前经验分布。
 
 ## 参考文献
 
@@ -209,3 +185,6 @@ Kallio, E., and Barabash, S. (2001), Atmospheric effects of precipitating
 energetic hydrogen atoms on the Martian atmosphere, Journal of Geophysical
 Research: Space Physics, 106(A1), 165 to 177,
 https://doi.org/10.1029/2000JA002003.
+
+Rahmati, A. (2016), Oxygen Exosphere of Mars: Evidence from Pickup Ions
+Measured by MAVEN, PhD dissertation, University of Kansas, Section 2.2.4.

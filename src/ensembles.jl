@@ -174,14 +174,13 @@ function run_hot_o_corona(
                 target = choose_collision_target(
                     rng, targets, local_state.density_m3, energy_eV,
                 )
-                theta_lab = sample_scattering_angle(
+                theta_com = sample_scattering_angle(
                     rng, scattering_distribution,
-                    O_MASS_KG, target.mass_kg,
                 )
-                projectile_after, target_after = elastic_collision_lab(
-                    particle.velocity_m_s,
+                projectile_after, target_after = elastic_collision(
+                    particle.velocity_m_s, (0.0, 0.0, 0.0),
                     O_MASS_KG, target.mass_kg,
-                    theta_lab, sample_azimuth(rng),
+                    theta_com, sample_azimuth(rng),
                 )
                 particle.velocity_m_s = projectile_after
                 particle.collisions += 1

@@ -77,4 +77,4 @@ P(s\mid\mathrm{coll})
 当前散射角分布采用 Kallio 与 Barabash (2001) 给出的高能 H 在火星大气中
 碰撞的结果。后续获得合适的热 O 散射角数据后，可以补充或替换为 O 与不同
 中性成分的专属分布。角度抽样和两体碰撞计算见
-[LAB 散射角与两体碰撞](HOT_O_SCATTERING_TWO_BODY_ZH.md)。
+[COM 散射角与两体碰撞](HOT_O_SCATTERING_TWO_BODY_ZH.md)。

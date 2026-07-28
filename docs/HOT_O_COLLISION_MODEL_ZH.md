@@ -21,12 +21,12 @@ MarsHotO 由热 O 源模型和碰撞传输模型两部分组成。
 
 ## 3. 散射角和两体运动学
 
-当前模型从 MarsASPEN 的 Kallio 与 Barabash (2001) 查找表直接抽取 LAB
-散射角，不使用 Rahmati 解析角分布，不设置 10° 截断。碰撞后速度由静止靶
-两体弹性碰撞的动量和能量守恒关系计算。
+当前模型从 MarsASPEN 的 Kallio 与 Barabash (2001) 查找表抽取角度数值，
+并将其作为经验 COM 散射角。碰撞后速度由静止靶两体弹性碰撞的动量和能量
+守恒关系计算。
 
 详细说明见
-[LAB 散射角与两体碰撞](HOT_O_SCATTERING_TWO_BODY_ZH.md)。
+[COM 散射角与两体碰撞](HOT_O_SCATTERING_TWO_BODY_ZH.md)。
 
 ## 4. 完整 Monte Carlo 流程
 
@@ -38,8 +38,8 @@ MarsHotO 由热 O 源模型和碰撞传输模型两部分组成。
     -> 在火星重力下推进粒子
     -> 抽样本步是否发生碰撞
     -> 按 n_s sigma_s 选择靶成分
-    -> 从查找表抽取 LAB 散射角，并抽取均匀方位角
-    -> 用 LAB 两体运动学计算入射粒子和靶粒子的碰撞后速度
+    -> 从查找表抽取经验 COM 散射角，并抽取均匀方位角
+    -> 在 COM 中散射并转换到 LAB 碰撞后速度
     -> 继续追踪主粒子，必要时追踪次级 O
     -> 用驻留时间估计高度和能量分布
 ```
@@ -60,7 +60,7 @@ MarsHotO 由热 O 源模型和碰撞传输模型两部分组成。
 |---|---|
 | 解离复合与振动态 | `data/chemistry/o2plus_dissociative_recombination.toml` |
 | 总碰撞截面 | `data/cross_sections/rahmati_total_cross_sections.toml` |
-| LAB 散射角逆 CDF | `data/cross_sections/scattering_angle_distribution.txt` |
+| 经验 COM 散射角逆 CDF | `data/cross_sections/scattering_angle_distribution.txt` |
 | MGITM 大气 | `MGITM/` |
 | 初始粒子 | `src/source_particles.jl` |
 | 散射角抽样 | `src/scattering.jl` |
@@ -69,5 +69,5 @@ MarsHotO 由热 O 源模型和碰撞传输模型两部分组成。
 | Monte Carlo 系综 | `src/ensembles.jl` |
 | 完整示例 | `examples/run_hot_o_corona.jl` |
 
-Rahmati 论文仍用于传输步长、碰撞概率和终止条件等整体流程。当前修改替换的
-只是散射角概率和与该 LAB 角对应的两体碰撞计算。
+Rahmati 论文仍用于传输步长、碰撞概率、COM 能量损失关系和终止条件等整体
+流程。当前角分布是把 Kallio 查找表的数值经验性地解释为 COM 角。

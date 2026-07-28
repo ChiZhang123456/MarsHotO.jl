@@ -45,11 +45,11 @@ function transport_particle!(rng, particle::HotOParticle,
                 rng, targets, local_state.density_m3, energy_eV,
             )
             theta = sample_scattering_angle(
-                rng, scattering_distribution, O_MASS_KG, target.mass_kg,
+                rng, scattering_distribution,
             )
             phi = sample_azimuth(rng)
-            particle.velocity_m_s, _ = elastic_collision_lab(
-                particle.velocity_m_s,
+            particle.velocity_m_s, _ = elastic_collision(
+                particle.velocity_m_s, (0.0, 0.0, 0.0),
                 O_MASS_KG, target.mass_kg, theta, phi,
             )
             particle.collisions += 1

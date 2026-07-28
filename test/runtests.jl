@@ -37,9 +37,9 @@ end
     @test first(distribution.random_number) == 0.0
     @test last(distribution.random_number) == 1.0
     @test issorted(distribution.random_number)
-    @test issorted(distribution.theta_lab_rad)
-    @test rad2deg(first(distribution.theta_lab_rad)) ≈ 0.12
-    @test rad2deg(last(distribution.theta_lab_rad)) ≈ 180.0
+    @test issorted(distribution.theta_com_rad)
+    @test rad2deg(first(distribution.theta_com_rad)) ≈ 0.12
+    @test rad2deg(last(distribution.theta_com_rad)) ≈ 180.0
     median_angle = scattering_angle_cdf(
         deg2rad(0.335989), distribution,
     )

@@ -11,7 +11,7 @@ The current repository contains the Python prototype used to:
 5. Include the Martian O2+ vibrational distribution from Fox and Hać (1997).
 6. Plot MGITM profiles, discrete reaction channels, nascent energy probabilities, and spectral production rates.
 
-The Julia core reads MGITM atmospheres, samples O2+ dissociative recombination source particles, samples LAB scattering angles from the MarsASPEN lookup table, performs conservative two-body collision kinematics, and transports particles using collision optical depth and Martian gravity. Python remains responsible for input inspection, validation, analysis, and scientific plotting.
+The Julia core reads MGITM atmospheres, samples O2+ dissociative recombination source particles, treats the MarsASPEN lookup-table values as empirical COM scattering angles, performs conservative two-body collision kinematics, and transports particles using collision optical depth and Martian gravity. Python remains responsible for input inspection, validation, analysis, and scientific plotting.
 
 ## Package layout
 
@@ -27,7 +27,7 @@ test/                 Julia numerical and physics tests
 
 ## Collision physics
 
-MarsHotO samples the projectile LAB scattering angle from the inverse-CDF lookup table used by MarsASPEN. The table was digitized from Figure 2 of Kallio and Barabash (2001). The complete tabulated angular range is used without an additional angle cutoff. Post-collision projectile and target velocities conserve momentum and kinetic energy.
+MarsHotO samples from the inverse-CDF lookup table used by MarsASPEN. The source table was digitized from Figure 2 of Kallio and Barabash (2001) and labels its values as LAB angles. As an explicit model approximation, MarsHotO interprets those values as COM scattering angles and applies Rahmati's COM energy-loss relation. The complete tabulated angular range is used without an additional angle cutoff. Post-collision projectile and target velocities conserve momentum and kinetic energy.
 
 物理模型的中文逐步说明见：
 
@@ -62,7 +62,7 @@ See [HOT_OXYGEN_MODEL_PLAN.md](HOT_OXYGEN_MODEL_PLAN.md) and [AGENTS.md](AGENTS.
 
 ### `examples/plot_collision_physics.py`
 
-Plots the Kallio and Barabash inverse-CDF scattering table, its Monte Carlo angle distribution, fractional energy loss versus LAB scattering angle, and total collision cross sections versus energy.
+Plots the Kallio and Barabash inverse-CDF scattering table interpreted as empirical COM angles, its Monte Carlo angle distribution, fractional energy loss versus COM scattering angle, and total collision cross sections versus energy.
 
 ### `examples/plot_mgitm_profiles.py`
 

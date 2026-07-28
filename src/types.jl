@@ -23,7 +23,7 @@ end
 
 struct ScatteringAngleDistribution
     random_number::Vector{Float64}
-    theta_lab_rad::Vector{Float64}
+    theta_com_rad::Vector{Float64}
 end
 
 mutable struct HotOParticle

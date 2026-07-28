@@ -61,20 +61,16 @@ def configure_matplotlib() -> None:
 
 def load_scattering_distribution() -> tuple[np.ndarray, np.ndarray]:
     table = np.loadtxt(
-        SCATTERING_FILE, comments="#", skiprows=8, dtype=float
+        SCATTERING_FILE, comments="#", skiprows=9, dtype=float
     )
     order = np.argsort(table[:, 0])
     return table[order, 0], table[order, 1]
 
 
 def fractional_energy_loss(
-    theta_rad: np.ndarray,
+    theta_com_rad: np.ndarray,
     target_mass_amu: float,
 ) -> np.ndarray:
-    mass_ratio = PROJECTILE_MASS_AMU / target_mass_amu
-    theta_com_rad = theta_rad + np.arcsin(
-        np.clip(mass_ratio * np.sin(theta_rad), -1.0, 1.0)
-    )
     return (
         2.0
         * PROJECTILE_MASS_AMU
@@ -168,7 +164,7 @@ def make_figure() -> plt.Figure:
         xlim=(0.0, 180.0),
         yscale="log",
         ylim=(1.0e-6, 1.0),
-        xlabel=r"LAB scattering angle, $\theta$ (deg)",
+        xlabel=r"Empirical COM scattering angle, $\theta$ (deg)",
         ylabel=r"Probability density (deg$^{-1}$)",
         title="Kallio and Barabash angle distribution",
     )
@@ -187,11 +183,7 @@ def make_figure() -> plt.Figure:
         r"CO$_2$": COLORS[r"CO$_2$"],
     }
     for species, mass_amu in energy_loss_groups.items():
-        theta_max_deg = (
-            180.0 if PROJECTILE_MASS_AMU < mass_amu else
-            np.rad2deg(np.arcsin(mass_amu / PROJECTILE_MASS_AMU))
-        )
-        species_theta_deg = np.linspace(0.12, theta_max_deg, 2000)
+        species_theta_deg = np.linspace(0.12, 180.0, 2000)
         axes[2].plot(
             species_theta_deg,
             fractional_energy_loss(
@@ -204,18 +196,11 @@ def make_figure() -> plt.Figure:
     axes[2].set(
         xlim=(0.0, 180.0),
         ylim=(0.0, 1.02),
-        xlabel=r"LAB scattering angle, $\theta$ (deg)",
+        xlabel=r"COM scattering angle, $\theta$ (deg)",
         ylabel=r"Fractional energy loss, $\Delta E/E$",
         title="Elastic energy transfer",
     )
     axes[2].legend(ncol=2, loc="upper left")
-    axes[2].axvline(
-        90.0, color=COLORS["O"], linestyle=":", linewidth=0.9
-    )
-    axes[2].text(
-        92.0, 0.04, "O + O LAB limit",
-        color=COLORS["O"], fontsize=7, va="bottom", rotation=90,
-    )
 
     for label, axis in zip(("a", "b", "c"), axes):
         axis.text(

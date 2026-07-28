@@ -10,8 +10,10 @@ model and use
 The scattering angles are read from
 `scattering_angle_distribution.txt`. This file is copied from MarsASPEN and
 is an inverse CDF mapping from a uniform random number to the projectile
-scattering angle in the LAB frame. The table was digitized from Figure 2 of
-Kallio and Barabash (2001).
+scattering angle. The source table labels the angle as LAB and was digitized
+from Figure 2 of Kallio and Barabash (2001). MarsHotO intentionally treats
+the tabulated angle values as an empirical COM distribution before applying
+two-body kinematics.
 
 The complete tabulated angular range is used. MarsHotO applies no additional
 minimum angle cutoff and therefore uses the full total collision cross

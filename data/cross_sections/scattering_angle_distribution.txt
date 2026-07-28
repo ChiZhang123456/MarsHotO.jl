@@ -3,6 +3,7 @@
 # X axis: Random number
 # Y axis: Scattering angle \theta_{LAB} (deg.)
 # Interpretation: inverse CDF style mapping from random number to H or H-ENA atmospheric scattering angle in LAB frame.
+# MarsHotO model convention: interpret these angle values as empirical COM angles.
 # Source: Kallio and Barabash (2001), doi:10.1029/2000JA002003
 # Columns: random_number scattering_angle_lab_deg
 random_number	scattering_angle_lab_deg
