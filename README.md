@@ -9,7 +9,7 @@ The current repository contains the Python prototype used to:
 3. Sample the four non-negligible reaction branches.
 4. Calculate nascent hot O energy distributions using electron and ion thermal velocities.
 5. Include the Martian O2+ vibrational distribution from Fox and Hać (1997).
-6. Plot MGITM profiles, discrete reaction channels, nascent energy probabilities, and spectral production rates.
+6. Plot MGITM profiles, discrete reaction channels, nascent energy probabilities, and production rates in fixed energy bins.
 
 The Julia core reads MGITM atmospheres, samples O2+ dissociative recombination source particles, samples the Rahmati and Kharchenko analytical COM scattering-angle distribution, performs conservative two-body collision kinematics, and transports particles using collision optical depth and Martian gravity. Python remains responsible for input inspection, validation, analysis, and scientific plotting.
 
@@ -119,14 +119,15 @@ Calculates and plots:
 
 1. The dimensionless conditional probability in each 0.025 eV energy bin,
    $P_k(z)=N_k(z)/N_{\mathrm{tot}}(z)$
-2. The altitude and energy dependent spectral production rate,
-   $Q(E_k,z)=Q_{\mathrm{hotO}}(z)P_k(z)/\Delta E$, in
-   cm$^{-3}$ s$^{-1}$ eV$^{-1}$
+2. The production rate in each 0.025 eV energy bin,
+   $Q_k(z)=Q_{\mathrm{hotO}}^{(\mathrm{m^{-3}})}(z)P_k(z)$, in
+   m$^{-3}$ s$^{-1}$
 
-The left panel does not divide by the energy-bin width. The right panel divides
-by $\Delta E$ because it reports production per unit energy. Consequently,
+Neither panel divides by the energy-bin width. Consequently,
 $\sum_k P_k(z)=1$ and
-$\sum_k Q(E_k,z)\Delta E=Q_{\mathrm{hotO}}(z)$.
+$\sum_k Q_k(z)=Q_{\mathrm{hotO}}^{(\mathrm{m^{-3}})}(z)$.
+The plotted total production rate is converted from cm$^{-3}$ s$^{-1}$ to
+m$^{-3}$ s$^{-1}$ by multiplying by $10^6$.
 
 The calculation currently includes:
 
@@ -196,7 +197,7 @@ julia --project=. -e "using Pkg; Pkg.test()"
 
 ![Hot O collision physics](examples/figures/hot_o_collision_cross_sections_and_scattering.png)
 
-### Nascent hot O probability and spectral production with O2+ vibration
+### Nascent hot O probability and production rate per energy bin
 
 ![Hot O energy maps](examples/figures/mgitm_ls000_f070_hot_o_nascent_energy_with_vibration_energy_maps.png)
 

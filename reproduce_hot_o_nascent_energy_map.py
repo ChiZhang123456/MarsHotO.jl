@@ -1,8 +1,8 @@
 """Reproduce hot O nascent energy maps from an MGITM vertical profile.
 
 This script creates:
-1. A Lillis Figure 1 style conditional energy probability map.
-2. A Rahmati Figure 2.4 style spectral production rate map.
+1. A conditional probability map for fixed-width energy bins.
+2. A production-rate map for the same energy bins.
 
 The electron and O2+ bulk velocities are zero. Their velocities are sampled
 from normalized three-dimensional Maxwellian distributions. Isotropy follows
@@ -198,7 +198,6 @@ def calculate_energy_maps(
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     rng = np.random.default_rng(RANDOM_SEED)
     energy_centers_ev = 0.5 * (ENERGY_EDGES_EV[:-1] + ENERGY_EDGES_EV[1:])
-    energy_bin_width_ev = np.diff(ENERGY_EDGES_EV)
     energy_bin_probability = np.empty(
         (len(profile), len(energy_centers_ev)),
         dtype=float,
@@ -220,15 +219,15 @@ def calculate_energy_maps(
             reactions_remaining -= batch_size
         energy_bin_probability[altitude_index, :] = counts / counts.sum()
 
-    spectral_production_cm3s_ev1 = (
+    production_rate_per_bin_m3s = (
         profile["Q_hotO_cm3s"].to_numpy()[:, None]
+        * 1.0e6
         * energy_bin_probability
-        / energy_bin_width_ev
     )
     return (
         energy_centers_ev,
         energy_bin_probability,
-        spectral_production_cm3s_ev1,
+        production_rate_per_bin_m3s,
     )
 
 
@@ -236,7 +235,7 @@ def save_source_data(
     profile: pd.DataFrame,
     energy_centers_ev: np.ndarray,
     energy_bin_probability: np.ndarray,
-    spectral_production_cm3s_ev1: np.ndarray,
+    production_rate_per_bin_m3s: np.ndarray,
 ) -> None:
     altitude_grid_km, energy_grid_ev = np.meshgrid(
         profile["altitude_km"].to_numpy(),
@@ -248,8 +247,8 @@ def save_source_data(
             "altitude_km": altitude_grid_km.ravel(),
             "energy_eV": energy_grid_ev.ravel(),
             "energy_bin_probability": energy_bin_probability.ravel(),
-            "spectral_production_cm-3_s-1_eV-1": (
-                spectral_production_cm3s_ev1.ravel()
+            "production_rate_per_bin_m-3_s-1": (
+                production_rate_per_bin_m3s.ravel()
             ),
         }
     )
@@ -272,7 +271,7 @@ def make_combined_figure(
     altitude_km: np.ndarray,
     energy_centers_ev: np.ndarray,
     energy_bin_probability: np.ndarray,
-    spectral_production_cm3s_ev1: np.ndarray,
+    production_rate_per_bin_m3s: np.ndarray,
 ) -> plt.Figure:
     configure_matplotlib()
     fig, axes = plt.subplots(
@@ -329,7 +328,7 @@ def make_combined_figure(
     )
 
     log_production = np.log10(
-        np.maximum(spectral_production_cm3s_ev1, 1.0e-6)
+        np.maximum(production_rate_per_bin_m3s, 1.0)
     )
     production_image = axes[1].imshow(
         log_production,
@@ -343,15 +342,15 @@ def make_combined_figure(
         ),
         interpolation=PLOT_INTERPOLATION,
         cmap="turbo",
-        vmin=-4.0,
-        vmax=4.5,
+        vmin=0.0,
+        vmax=9.0,
         rasterized=True,
     )
     axes[1].set(
         xlabel="Nascent O energy (eV)",
         xlim=(0.0, 5.0),
         ylim=(float(altitude_km.min()), float(altitude_km.max())),
-        title="Spectral production rate",
+        title="Production rate per energy bin",
     )
     production_colorbar = fig.colorbar(
         production_image,
@@ -359,7 +358,7 @@ def make_combined_figure(
         pad=0.03,
     )
     production_colorbar.set_label(
-        r"$\log_{10}\,[Q(E,z)\;(\mathrm{cm^{-3}\,s^{-1}\,eV^{-1}})]$"
+        r"$\log_{10}\,[Q_k(z)\;(\mathrm{m^{-3}\,s^{-1}})]$"
     )
 
     for label, axis in zip(("a", "b"), axes):
@@ -387,38 +386,36 @@ def main() -> None:
     (
         energy_centers_ev,
         energy_bin_probability,
-        spectral_production_cm3s_ev1,
+        production_rate_per_bin_m3s,
     ) = calculate_energy_maps(profile)
     save_source_data(
         profile,
         energy_centers_ev,
         energy_bin_probability,
-        spectral_production_cm3s_ev1,
+        production_rate_per_bin_m3s,
     )
 
     combined_figure = make_combined_figure(
         profile["altitude_km"].to_numpy(),
         energy_centers_ev,
         energy_bin_probability,
-        spectral_production_cm3s_ev1,
+        production_rate_per_bin_m3s,
     )
     combined_figure.savefig(OUTPUT_FIGURE, dpi=400, bbox_inches="tight")
     plt.close(combined_figure)
 
-    integrated_production = np.sum(
-        spectral_production_cm3s_ev1 * np.diff(ENERGY_EDGES_EV)[None, :],
-        axis=1,
-    )
-    relative_error = np.max(
-        np.abs(integrated_production - profile["Q_hotO_cm3s"].to_numpy())
-        / profile["Q_hotO_cm3s"].to_numpy()
+    summed_production_m3s = np.sum(production_rate_per_bin_m3s, axis=1)
+    expected_production_m3s = profile["Q_hotO_cm3s"].to_numpy() * 1.0e6
+    production_sum_relative_error = np.max(
+        np.abs(summed_production_m3s - expected_production_m3s)
+        / expected_production_m3s
     )
     probability_sum_error = np.max(
         np.abs(np.sum(energy_bin_probability, axis=1) - 1.0)
     )
     peak_index = np.unravel_index(
-        np.argmax(spectral_production_cm3s_ev1),
-        spectral_production_cm3s_ev1.shape,
+        np.argmax(production_rate_per_bin_m3s),
+        production_rate_per_bin_m3s.shape,
     )
 
     print(f"Input: {INPUT_FILE}")
@@ -441,10 +438,13 @@ def main() -> None:
         f"{np.sum(VIBRATIONAL_PROBABILITY * VIBRATIONAL_QUANTUM_NUMBER) * VIBRATIONAL_QUANTUM_ENERGY_EV:.6f} eV"
     )
     print(f"Maximum probability sum error: {probability_sum_error:.3e}")
-    print(f"Maximum spectral integration relative error: {relative_error:.3e}")
     print(
-        "Maximum spectral production: "
-        f"{spectral_production_cm3s_ev1[peak_index]:.6e} cm^-3 s^-1 eV^-1 "
+        "Maximum production-rate sum relative error: "
+        f"{production_sum_relative_error:.3e}"
+    )
+    print(
+        "Maximum production rate per energy bin: "
+        f"{production_rate_per_bin_m3s[peak_index]:.6e} m^-3 s^-1 "
         f"at altitude={profile.loc[peak_index[0], 'altitude_km']:.2f} km, "
         f"energy={energy_centers_ev[peak_index[1]]:.3f} eV"
     )
