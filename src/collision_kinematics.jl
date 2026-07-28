@@ -1,3 +1,10 @@
+"""
+Elastic two-body collision kinematics.
+
+Targets are stationary before collision in the Mars LAB frame. The sampled
+angle is applied in COM, then projectile and recoil velocities are returned
+in LAB while conserving momentum and total kinetic energy.
+"""
 @inline _add(a, b) = (a[1] + b[1], a[2] + b[2], a[3] + b[3])
 @inline _subtract(a, b) = (a[1] - b[1], a[2] - b[2], a[3] - b[3])
 @inline _scale(c, a) = (c * a[1], c * a[2], c * a[3])

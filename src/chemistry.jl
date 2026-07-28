@@ -1,3 +1,10 @@
+"""
+O2+ dissociative recombination chemistry.
+
+The coefficient and four fixed branches follow the project configuration.
+Reaction rates are converted to SI units before particle sampling.
+"""
+
 """O2+ dissociative recombination coefficient in m^3 s^-1."""
 function dissociative_recombination_coefficient(Te_K::Real)
     Te_K > 0 || throw(DomainError(Te_K, "Electron temperature must be positive"))

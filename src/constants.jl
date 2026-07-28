@@ -1,3 +1,9 @@
+"""
+Physical constants used throughout MarsHotO.
+
+All internal calculations use SI units. Energies exposed by public particle
+and diagnostic interfaces are expressed in electronvolts.
+"""
 const EV_J = 1.602176634e-19
 const BOLTZMANN_J_K = 1.380649e-23
 const AMU_KG = 1.66053906892e-27

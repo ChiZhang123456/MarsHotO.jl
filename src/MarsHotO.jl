@@ -1,24 +1,28 @@
+"""
+MarsHotO models photochemical hot oxygen at Mars.
+
+The package exposes low-level atmosphere, chemistry, scattering, and
+two-body-kinematics functions, a direct single-particle propagator, and a
+weighted particle-ensemble driver with residence-time density diagnostics.
+All internal transport calculations use SI units unless a field or function
+name explicitly states eV, km, cm^-3, or another output unit.
+"""
 module MarsHotO
 
 using DelimitedFiles
 using Random
 using TOML
 
-include("shared/constants.jl")
-include("shared/types.jl")
-include("shared/atmosphere.jl")
-include("shared/chemistry.jl")
-include("shared/cross_sections.jl")
-include("shared/scattering.jl")
-include("shared/collision_kinematics.jl")
-
-include("monte_carlo/types.jl")
-include("monte_carlo/source_particles.jl")
-include("monte_carlo/transport.jl")
-include("monte_carlo/ensembles.jl")
-
-include("two_fluid/types.jl")
-include("two_fluid/two_stream.jl")
+include("constants.jl")
+include("types.jl")
+include("atmosphere.jl")
+include("chemistry.jl")
+include("cross_sections.jl")
+include("scattering.jl")
+include("collision_kinematics.jl")
+include("source_particles.jl")
+include("transport.jl")
+include("ensembles.jl")
 
 export AtmosphereProfile, CollisionTarget, DRBranch, HotOParticle
 export MARS_RADIUS_M, O_MASS_KG, EV_J
@@ -35,7 +39,5 @@ export elastic_collision, elastic_collision_lab
 export sample_hot_o_source, transport_particle!
 export RahmatiMonteCarloConfig, HotOCoronaResult, rahmati_step_length
 export run_hot_o_corona, write_corona_distribution
-export TwoStreamConfig, TwoStreamRedistribution, TwoStreamResult
-export build_two_stream_redistribution, run_two_stream, write_two_stream_flux
 
 end

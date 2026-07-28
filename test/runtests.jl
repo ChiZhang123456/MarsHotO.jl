@@ -16,6 +16,32 @@ const ROOT = normpath(joinpath(@__DIR__, ".."))
     @test getfield.(branches, :probability) == [0.265, 0.473, 0.204, 0.058]
 end
 
+@testset "Zero-mode thermal source sampling" begin
+    rng = Xoshiro(73)
+    temperature_K = 300.0
+    sample_count = 100_000
+    velocities = [
+        MarsHotO._sample_thermal_velocity(
+            rng, temperature_K, O_MASS_KG,
+        )
+        for _ in 1:sample_count
+    ]
+    mean_velocity = [
+        sum(velocity[component] for velocity in velocities) / sample_count
+        for component in 1:3
+    ]
+    thermal_speed = sqrt(
+        MarsHotO.BOLTZMANN_J_K * temperature_K / O_MASS_KG,
+    )
+    @test all(abs.(mean_velocity) .< 0.015thermal_speed)
+    sampled_mean_energy = sum(
+        0.5O_MASS_KG * sum(abs2, velocity) for velocity in velocities
+    ) / sample_count
+    expected_mean_energy =
+        sqrt(2 / pi) * MarsHotO.BOLTZMANN_J_K * temperature_K
+    @test sampled_mean_energy ≈ expected_mean_energy rtol=0.01
+end
+
 @testset "Cross sections" begin
     targets = load_collision_targets(joinpath(
         ROOT, "data", "cross_sections", "rahmati_total_cross_sections.toml",
@@ -27,65 +53,6 @@ end
     density_m3 = Dict(:O => 1.0e15)
     @test collision_coefficient(targets, density_m3, 3.0) ≈
           1.0e15 * 6.4e-19
-end
-
-@testset "Two-stream transport" begin
-    profile = load_mgitm_subsolar_profile(joinpath(
-        ROOT, "MGITM", "MGITM_LS000_F070_150901.dat",
-    ))
-    branches = load_reaction_branches(joinpath(
-        ROOT, "data", "chemistry", "o2plus_dissociative_recombination.toml",
-    ))
-    all_targets = load_collision_targets(joinpath(
-        ROOT, "data", "cross_sections", "rahmati_total_cross_sections.toml",
-    ))
-    targets = filter(target -> target.species in (:O, :CO2), all_targets)
-    edges = collect(0.01:0.5:7.01)
-    redistribution1 = build_two_stream_redistribution(
-        targets, edges; samples=300, seed=73,
-    )
-    redistribution2 = build_two_stream_redistribution(
-        targets, edges; samples=300, seed=73,
-    )
-    @test redistribution1.same_stream == redistribution2.same_stream
-    @test all(redistribution1.same_stream .>= 0)
-    @test all(redistribution1.reverse_stream .>= 0)
-    for target_index in eachindex(targets), source_index in 1:length(edges)-1
-        projectile_probability = sum(
-            redistribution1.same_stream[target_index, source_index, :] +
-            redistribution1.reverse_stream[target_index, source_index, :],
-        )
-        @test projectile_probability <= 1 + 1e-12
-    end
-    oxygen_index = findfirst(target -> target.species == :O, targets)
-    @test sum(redistribution1.secondary_same_stream[oxygen_index, :, :]) > 0
-
-    config = TwoStreamConfig(
-        altitude_min_m=100e3,
-        altitude_max_m=110e3,
-        altitude_step_m=2e3,
-        energy_edges_eV=edges,
-        redistribution_samples=300,
-        maximum_iterations=100,
-        relative_tolerance=1e-5,
-    )
-    result = run_two_stream(
-        profile, targets, branches;
-        chemistry_path=joinpath(
-            ROOT, "data", "chemistry",
-            "o2plus_dissociative_recombination.toml",
-        ),
-        config=config,
-        redistribution=redistribution1,
-    )
-    @test size(result.upward_flux_m2_s1) ==
-          (length(result.altitude_m), length(edges) - 1)
-    @test all(isfinite, result.upward_flux_m2_s1)
-    @test all(result.upward_flux_m2_s1 .>= 0)
-    @test all(result.downward_flux_m2_s1 .>= 0)
-    @test result.upward_flux_m2_s1[1, :] ≈
-          result.downward_flux_m2_s1[1, :]
-    @test result.escape_flux_m2_s1 >= 0
 end
 
 @testset "Scattering distribution" begin

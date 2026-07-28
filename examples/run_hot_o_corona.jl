@@ -1,6 +1,6 @@
 using MarsHotO
 
-const ROOT = normpath(joinpath(@__DIR__, "..", ".."))
+const ROOT = normpath(joinpath(@__DIR__, ".."))
 const PARTICLES = length(ARGS) >= 1 ? parse(Int, ARGS[1]) : 10_000
 const SEED = length(ARGS) >= 2 ? parse(Int, ARGS[2]) : 20260727
 

@@ -1,3 +1,9 @@
+"""
+Rahmati analytical COM scattering-angle distribution.
+
+The probability density includes the solid-angle Jacobian sin(theta). The
+complete interval from 0 to pi is sampled without a minimum-angle cutoff.
+"""
 const RAHMATI_DCS_ALPHA_M2_SR = 0.36e-16 * 1e-4
 const RAHMATI_DCS_BETA = -1.85
 

@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = Path(__file__).resolve().parents[1]
 INPUT = ROOT / "examples" / "output" / "hot_o_altitude_energy_distribution.dat"
 OUTPUT = ROOT / "examples" / "figures" / "hot_o_altitude_energy_distribution.png"
 

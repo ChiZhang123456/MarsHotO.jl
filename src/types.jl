@@ -1,3 +1,9 @@
+"""
+Core atmosphere, chemistry, and collision data structures.
+
+Field names include units wherever practical so that transport inputs remain
+traceable across file reading, interpolation, and collision calculations.
+"""
 struct AtmosphereProfile
     altitude_m::Vector{Float64}
     Tn_K::Vector{Float64}
@@ -19,4 +25,13 @@ struct CollisionTarget
     species::Symbol
     mass_kg::Float64
     sigma_3eV_m2::Float64
+end
+
+"""One weighted hot O test particle propagated in the stationary Mars frame."""
+mutable struct HotOParticle
+    position_m::NTuple{3,Float64}
+    velocity_m_s::NTuple{3,Float64}
+    weight::Float64
+    alive::Bool
+    collisions::Int
 end

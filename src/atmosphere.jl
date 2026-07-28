@@ -1,3 +1,9 @@
+"""
+MGITM atmosphere input and interpolation.
+
+The nearest-subsolar grid columns are averaged at each altitude. Number
+densities remain in m^-3, temperatures in K, and altitude is converted to m.
+"""
 const MGITM_COLUMNS = (
     :longitude_deg, :latitude_deg, :altitude_km, :Tn_K, :Ti_K, :Te_K,
     :CO2, :O, :N2, :CO, :O2, :O2p, :Op, :CO2p, :e, :UN, :VN, :WN,

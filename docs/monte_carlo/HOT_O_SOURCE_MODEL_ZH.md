@@ -61,6 +61,10 @@ Q_{\mathrm{hotO}}(z)=
 
 因此，$n_e$ 和 $n_{\mathrm{O_2^+}}$ 主要控制产生率的高度形状，$T_e$ 通过反应系数进一步调节产生率。
 
+下图给出默认 MGITM 基准大气的 $\mathrm{O_2^+}$ 数密度、温度以及热 O 总体积产生率。右侧面板 c 是本节使用的 $Q_{\mathrm{hotO}}(z)$，单位为 $\mathrm{cm^{-3}\,s^{-1}}$。
+
+![MGITM 热 O 高度产生率](../../examples/figures/mgitm_ls000_f070_profiles.png)
+
 ## 3. 四个反应分支
 
 模型使用四个不可忽略的解离复合分支。
@@ -95,22 +99,99 @@ Monte Carlo 不是为了计算总产生率。总产生率由密度和反应系�
 
 ## 5. 如何由 $T_e$ 和 $T_i$ 抽取速度
 
-温度为 $T$、质量为 $m$ 的 Maxwell 分布，可以通过独立抽取三个笛卡尔速度分量实现：
+当前模型把电子和 $\mathrm{O_2^+}$ 的背景整体速度都设为零：
 
 ```math
-v_x,v_y,v_z\sim
-\mathcal{N}\left(0,\frac{k_{\mathrm B}T}{m}\right).
+\mathbf u_{e,\mathrm{bulk}}
+=
+\mathbf u_{i,\mathrm{bulk}}
+=0.
 ```
 
-也就是说，每个分量的标准差是
+温度只决定相对于零整体速度的热运动。按照当前指定的源模型，电子和 $\mathrm{O_2^+}$ 的非负热能使用以零能量为峰值的半高斯分布：
 
 ```math
-\sigma_v=\sqrt{\frac{k_{\mathrm B}T}{m}}.
+p_s(E\mid T_s)
+=
+\sqrt{\frac{2}{\pi}}
+\frac{1}{\sigma_{E,s}}
+\exp\left[-\frac{E^2}{2\sigma_{E,s}^2}\right],
+\qquad E\ge0.
 ```
 
-电子质量很小，所以相同温度下电子速度远大于 $\mathrm{O_2^+}$ 速度。但是反应运动学还要乘以质量，因此不能只凭速度大小判断其对最终 LAB 能量展宽的贡献。
+其中电子和 $\mathrm{O_2^+}$ 的能量宽度分别由各自温度控制：
 
-设抽到的速度为 $\mathbf v_e$ 和 $\mathbf v_i$。反应物质心速度为
+```math
+\sigma_{E,e}=k_{\mathrm B}T_e,
+\qquad
+\sigma_{E,i}=k_{\mathrm B}T_i.
+```
+
+该分布满足
+
+```math
+p_s(0\mid T_s)
+=
+\sqrt{\frac{2}{\pi}}\frac{1}{k_{\mathrm B}T_s},
+```
+
+所以概率密度峰值严格位于 $E=0$。平均热能为
+
+```math
+\langle E_s\rangle
+=
+\sqrt{\frac{2}{\pi}}k_{\mathrm B}T_s.
+```
+
+需要说明，该半高斯能量分布是当前模型采用的指定近似，不是标准三维 Maxwell-Boltzmann 总动能分布。
+
+对电子和 $\mathrm{O_2^+}$ 分别进行以下抽样：
+
+1. 抽取标准正态随机数 $\xi_s\sim\mathcal N(0,1)$。
+2. 计算非负热能：
+
+```math
+E_s=\left|\xi_s\right|k_{\mathrm B}T_s.
+```
+
+3. 由质量 $m_s$ 计算速度大小：
+
+```math
+v_s=\sqrt{\frac{2E_s}{m_s}}.
+```
+
+4. 速度方向与能量独立，并在整个球面上各向同性抽取：
+
+```math
+\mu=\cos\theta=2u_1-1,
+\qquad
+\varphi=2\pi u_2,
+```
+
+其中 $u_1$ 和 $u_2$ 是区间 $[0,1)$ 上的均匀随机数。
+
+因此，速度为
+
+```math
+\mathbf v
+=v\left(
+\sqrt{1-\mu^2}\cos\varphi,
+\sqrt{1-\mu^2}\sin\varphi,
+\mu
+\right).
+```
+
+如果用单个均匀随机分位数 $u$ 表示能量抽样，则有
+
+```math
+E=F_E^{-1}(u),
+```
+
+其中 $F_E$ 是半高斯能量分布的累积分布函数。300 K 条件下的能量概率和随机分位数至能量映射见下图：
+
+![300 K 半高斯热能随机抽样](../../examples/figures/thermal_energy_sampling_300K.png)
+
+电子质量远小于 $\mathrm{O_2^+}$ 质量，所以相同温度和相同动能下电子速度更大。分别抽到 $\mathbf v_e$ 和 $\mathbf v_i$ 后，反应物质心速度为
 
 ```math
 \mathbf V_{\mathrm{COM}}=

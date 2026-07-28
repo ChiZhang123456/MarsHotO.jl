@@ -1,3 +1,10 @@
+"""
+Propagation of one hot O particle through the spherical Mars atmosphere.
+
+This file supports direct single-particle calculations. It advances a
+particle under gravity, evaluates collision probability, samples collision
+physics, and returns any recoil O secondary for optional further tracking.
+"""
 @inline kinetic_energy_eV(velocity, mass=O_MASS_KG) =
     0.5mass * _dot(velocity, velocity) / EV_J
 

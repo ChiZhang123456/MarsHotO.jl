@@ -1,3 +1,9 @@
+"""
+Energy-dependent total cross sections and collision-target selection.
+
+Cross sections are stored in m^2. Target probabilities are proportional to
+n_s sigma_s at the current hot O energy.
+"""
 function load_collision_targets(path::AbstractString)
     input = TOML.parsefile(path)
     [CollisionTarget(

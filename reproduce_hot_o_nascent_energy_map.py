@@ -4,9 +4,11 @@ This script creates:
 1. A Lillis Figure 1 style conditional energy probability map.
 2. A Rahmati Figure 2.4 style spectral production rate map.
 
-The nascent energy broadening is calculated from Maxwellian electron and O2+
-velocities followed by two-body reaction kinematics. Collisions with the
-neutral atmosphere are not part of these source maps.
+The electron and O2+ bulk velocities are zero. Their nonnegative kinetic
+energies are sampled from the configured zero-mode half-normal model with
+sigma_E = kB*T. Velocity directions are sampled independently and
+isotropically. Collisions with the neutral atmosphere are not part of these
+source maps.
 """
 
 from pathlib import Path
@@ -85,8 +87,26 @@ def sample_maxwellian_velocity(
     mass_kg: float,
     sample_count: int,
 ) -> np.ndarray:
-    component_sigma_ms = np.sqrt(BOLTZMANN_JK * temperature_k / mass_kg)
-    return rng.normal(0.0, component_sigma_ms, size=(sample_count, 3))
+    """Sample zero-bulk velocities using half-normal energy plus direction."""
+    kinetic_energy_j = np.abs(
+        rng.normal(
+            loc=0.0,
+            scale=BOLTZMANN_JK * temperature_k,
+            size=sample_count,
+        )
+    )
+    speed_ms = np.sqrt(2.0 * kinetic_energy_j / mass_kg)
+    cosine_polar = rng.uniform(-1.0, 1.0, size=sample_count)
+    azimuth = rng.uniform(0.0, 2.0 * np.pi, size=sample_count)
+    sine_polar = np.sqrt(np.maximum(1.0 - cosine_polar**2, 0.0))
+    direction = np.column_stack(
+        (
+            sine_polar * np.cos(azimuth),
+            sine_polar * np.sin(azimuth),
+            cosine_polar,
+        )
+    )
+    return speed_ms[:, None] * direction
 
 
 def sample_nascent_o_energies(
@@ -146,8 +166,16 @@ def sample_nascent_o_energies(
         2.0 * product_energy_com_ev * ELECTRON_VOLT_J / O_MASS_KG
     )
 
-    direction = rng.normal(size=(reaction_count, 3))
-    direction /= np.linalg.norm(direction, axis=1)[:, None]
+    cosine_polar = rng.uniform(-1.0, 1.0, size=reaction_count)
+    azimuth = rng.uniform(0.0, 2.0 * np.pi, size=reaction_count)
+    sine_polar = np.sqrt(np.maximum(1.0 - cosine_polar**2, 0.0))
+    direction = np.column_stack(
+        (
+            sine_polar * np.cos(azimuth),
+            sine_polar * np.sin(azimuth),
+            cosine_polar,
+        )
+    )
     product_velocity_com = product_speed_com_ms[:, None] * direction
 
     product_velocity_1 = center_of_mass_velocity + product_velocity_com
@@ -285,7 +313,7 @@ def make_combined_figure(
     axes[0].set(
         xlabel="Nascent O energy (eV)",
         ylabel="Altitude (km)",
-        xlim=(0.0, 7.0),
+        xlim=(0.0, 5.0),
         ylim=(float(altitude_km.min()), float(altitude_km.max())),
         title="Conditional energy probability",
     )
@@ -321,7 +349,7 @@ def make_combined_figure(
     )
     axes[1].set(
         xlabel="Nascent O energy (eV)",
-        xlim=(0.0, 7.0),
+        xlim=(0.0, 5.0),
         ylim=(float(altitude_km.min()), float(altitude_km.max())),
         title="Spectral production rate",
     )

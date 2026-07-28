@@ -61,14 +61,14 @@ MarsHotO 由热 O 源模型和碰撞传输模型两部分组成。
 |---|---|
 | 解离复合与振动态 | `data/chemistry/o2plus_dissociative_recombination.toml` |
 | 总碰撞截面 | `data/cross_sections/rahmati_total_cross_sections.toml` |
-| Rahmati COM 散射角解析模型 | `src/shared/scattering.jl` |
+| Rahmati COM 散射角解析模型 | `src/scattering.jl` |
 | MGITM 大气 | `MGITM/` |
-| 初始粒子 | `src/monte_carlo/source_particles.jl` |
-| 散射角抽样 | `src/shared/scattering.jl` |
-| 两体碰撞 | `src/shared/collision_kinematics.jl` |
-| 单粒子传输 | `src/monte_carlo/transport.jl` |
-| Monte Carlo 系综 | `src/monte_carlo/ensembles.jl` |
-| 完整示例 | `examples/monte_carlo/run_hot_o_corona.jl` |
+| 初始粒子 | `src/source_particles.jl` |
+| 散射角抽样 | `src/scattering.jl` |
+| 两体碰撞 | `src/collision_kinematics.jl` |
+| 单粒子传输 | `src/transport.jl` |
+| Monte Carlo 系综 | `src/ensembles.jl` |
+| 完整示例 | `examples/run_hot_o_corona.jl` |
 
 Rahmati 论文用于传输步长、碰撞概率、COM 散射角、能量损失关系和终止条件等整体
 流程。`data/cross_sections/scattering_angle_distribution.txt` 仅保留为 MarsASPEN

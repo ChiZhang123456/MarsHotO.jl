@@ -1,6 +1,6 @@
 # MarsHotO.jl
 
-Mars Hot Oxygen Transport model, abbreviated MHOT, is a Julia package for the production, collisional transport, corona formation, and photochemical escape of hot atomic oxygen at Mars. It includes both the Rahmati Monte Carlo particle model and the Rahmati one-dimensional two-stream transport model.
+Mars Hot Oxygen Transport model, abbreviated MHOT, is a Julia particle-transport package for the production, collisional transport, corona formation, and photochemical escape of hot atomic oxygen at Mars. It supports both direct single-particle propagation and weighted Monte Carlo ensembles.
 
 The current repository contains the Python prototype used to:
 
@@ -16,9 +16,7 @@ The Julia core reads MGITM atmospheres, samples O2+ dissociative recombination s
 ## Package layout
 
 ```text
-src/shared/           Atmosphere, chemistry, cross sections, and kinematics
-src/monte_carlo/      Monte Carlo particle transport
-src/two_fluid/        Rahmati two-stream transport
+src/                  Julia atmosphere, source, collision, and transport code
 data/chemistry/       O2+ dissociative recombination settings
 data/cross_sections/  Hot O collision settings
 data/atmosphere/      Atmosphere data notes
@@ -45,18 +43,10 @@ The probability density includes the solid-angle Jacobian
 * [热 O 与中性大气的碰撞截面](docs/monte_carlo/HOT_O_CROSS_SECTIONS_ZH.md)
 * [热 O 高度和初生能量分布](docs/monte_carlo/HOT_O_SOURCE_MODEL_ZH.md)
 * [LAB、COM、散射角和碰撞能量损失](docs/monte_carlo/HOT_O_SCATTERING_TWO_BODY_ZH.md)
-* [热 O 双流输运模型](docs/two_fluid/HOT_O_TWO_STREAM_MODEL_ZH.md)
 
 ## Current physics
 
-The Julia package provides two transport solvers:
-
-1. `run_hot_o_corona`, the three-dimensional Monte Carlo particle solver
-2. `run_two_stream`, the one-dimensional upward and downward flux solver
-
-The equations, units, collision redistribution, and boundary conditions of
-the second solver are documented in
-[HOT_O_TWO_STREAM_MODEL_ZH.md](docs/two_fluid/HOT_O_TWO_STREAM_MODEL_ZH.md).
+The Julia package provides `transport_particle!` for direct single-particle propagation and `run_hot_o_corona` for weighted three-dimensional Monte Carlo ensembles.
 
 The total hot O production rate is
 
@@ -88,14 +78,19 @@ Plots the Rahmati and Kharchenko analytical inverse CDF, fractional energy loss 
 
 Plots O2+ density, neutral/ion/electron temperatures, and hot O production rate versus altitude.
 
+### `examples/shared/plot_thermal_energy_sampling.py`
+
+Plots the configured 300 K zero-mode half-normal kinetic-energy probability
+density and the inverse-CDF mapping from a uniform random quantile to energy.
+
 ### Complete Rahmati Monte Carlo example
 
 Run the Julia transport model and then plot the residence-time altitude-energy
 density:
 
 ```bash
-julia --project=. examples/monte_carlo/run_hot_o_corona.jl 10000
-python examples/monte_carlo/plot_hot_o_corona.py
+julia --project=. examples/run_hot_o_corona.jl 10000
+python examples/plot_hot_o_corona.py
 ```
 
 The particle count is configurable. A production calculation can use
@@ -105,19 +100,6 @@ uses a decreasing log-linear density extrapolation above the model top.
 The nearest-subsolar column is extended spherically, so its absolute global
 source rate is a model approximation rather than a full three-dimensional
 MGITM result.
-
-### Rahmati two-stream example
-
-Run the one-dimensional upward and downward flux solver with:
-
-```bash
-julia --project=. examples/two_fluid/run_two_stream.jl
-```
-
-The solver uses a 1 km altitude grid from 100 to 300 km, constructs a
-collision redistribution matrix from the analytical COM scattering distribution,
-includes cascade and recoil-O secondary production, and writes
-`examples/output/hot_o_two_stream_flux.csv`.
 
 ### `plot_mgitm_hot_o_profiles.py`
 
@@ -140,8 +122,8 @@ Calculates and plots:
 
 The calculation currently includes:
 
-1. Maxwellian electron velocities from $T_e$
-2. Maxwellian O2+ velocities from $T_i$
+1. Zero-mode half-normal electron energies with width $k_B T_e$
+2. Zero-mode half-normal O2+ energies with width $k_B T_i$
 3. Center-of-mass two-body kinematics
 4. Isotropic product directions
 5. The Fox and Hać (1997) Mars O2+ vibrational distribution

@@ -1,3 +1,10 @@
+"""
+Weighted particle ensembles and residence-time diagnostics.
+
+This file builds the global source distribution, tracks primary and secondary
+particles, records termination reasons, and converts residence time into the
+spherical density spectrum n(E,z) in cm^-3 eV^-1.
+"""
 Base.@kwdef struct RahmatiMonteCarloConfig
     primary_particles::Int = 10_000
     seed::Int = 20260727
