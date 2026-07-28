@@ -11,7 +11,7 @@ The current repository contains the Python prototype used to:
 5. Include the Martian O2+ vibrational distribution from Fox and Hać (1997).
 6. Plot MGITM profiles, discrete reaction channels, nascent energy probabilities, and production rates in fixed energy bins.
 
-The Julia core reads MGITM atmospheres, samples O2+ dissociative recombination source particles, samples the Rahmati and Kharchenko analytical COM scattering-angle distribution, performs conservative two-body collision kinematics, and transports particles using collision optical depth and Martian gravity. Python remains responsible for input inspection, validation, analysis, and scientific plotting.
+The Julia core reads MGITM atmospheres, samples O2+ dissociative recombination source particles, samples the Rahmati and Kharchenko analytical COM scattering-angle distribution, performs conservative two-body collision kinematics, and transports particles under collisions and Martian gravity. Python remains responsible for input inspection, validation, analysis, and scientific plotting.
 
 ## Package layout
 
@@ -43,6 +43,7 @@ The probability density includes the solid-angle Jacobian
 * [热 O 与中性大气的碰撞截面](docs/monte_carlo/HOT_O_CROSS_SECTIONS_ZH.md)
 * [热 O 高度和初生能量分布](docs/monte_carlo/HOT_O_SOURCE_MODEL_ZH.md)
 * [LAB、COM、散射角和碰撞能量损失](docs/monte_carlo/HOT_O_SCATTERING_TWO_BODY_ZH.md)
+* [完整 Monte Carlo、方向通量和逃逸率](docs/monte_carlo/HOT_O_CROSSING_FLUX_AND_ESCAPE_ZH.md)
 
 ## Current physics
 
@@ -66,7 +67,7 @@ The four reaction channels use the following total released energies and branchi
 
 The prototype also supports the Mars exobase O2+ vibrational distribution reported by Fox and Hać (1997). Each vibrational quantum adds approximately 0.23 eV to the total reaction exothermicity.
 
-See [HOT_OXYGEN_MODEL_PLAN.md](HOT_OXYGEN_MODEL_PLAN.md) and [AGENTS.md](AGENTS.md) for the detailed model plan and fixed physical conventions.
+The complete public workflow and fixed physical conventions are documented under `docs/monte_carlo/`.
 
 ## Examples and scripts
 
@@ -132,6 +133,21 @@ The output unit is cm\(^{-2}\) s\(^{-1}\) per energy bin. It is not obtained
 by multiplying a residence-time density by the total particle speed. Large
 binary event files and derived numerical grids remain local under
 `examples/output/` and are not committed.
+
+Reproduce the 1.51 million primary-particle calculation as 20 statistically
+independent batches:
+
+```bash
+julia --project=. examples/run_hot_o_crossing_ensemble.jl \
+  20 500 20260810 examples/output/run_1p51m_crossings
+```
+
+Each batch represents the same physical source with an independent random
+seed. Directional fluxes are calculated for every batch and then averaged.
+The complete calculation, including macroparticle weights, collision
+transport, crossing-event flux, and the 300 km escape-rate estimate, is
+documented in
+[HOT_O_CROSSING_FLUX_AND_ESCAPE_ZH.md](docs/monte_carlo/HOT_O_CROSSING_FLUX_AND_ESCAPE_ZH.md).
 
 ### Complete Rahmati Monte Carlo example
 
@@ -271,6 +287,26 @@ julia --project=. -e "using Pkg; Pkg.test()"
 ### Two opposite hot O collision trajectories
 
 ![Two opposite hot O collision trajectories](examples/figures/two_opposite_hot_o_collision_trajectories.png)
+
+### Directional hot O flux from 100 to 300 km
+
+![Directional hot O flux from 100 to 300 km](examples/figures/hot_o_directional_flux_100_300km.png)
+
+### Directional hot O energy spectra at 300 km
+
+![Directional hot O energy spectra at 300 km](examples/figures/hot_o_directional_flux_spectrum_300km.png)
+
+For upward particles above the local escape energy of 1.92484 eV, the
+projected-area estimate is
+
+```math
+\dot N_{\mathrm{esc,proj}}
+=\Phi_{\mathrm{esc}}\pi(R_M+300\ \mathrm{km})^2
+=(1.23163\pm0.00624)\times10^{25}\ \mathrm{s^{-1}}.
+```
+
+The small machine-readable result summary is stored in
+[`examples/results/hot_o_escape_flux_300km.json`](examples/results/hot_o_escape_flux_300km.json).
 
 ## References
 
