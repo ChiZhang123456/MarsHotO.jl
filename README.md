@@ -117,7 +117,7 @@ Plots the four discrete hot O source energies without thermal broadening. The le
 
 Calculates and plots:
 
-1. The conditional nascent energy probability density
+1. The conditional nascent energy probability in each energy bin
 2. The altitude and energy dependent spectral production rate
 
 The calculation currently includes:

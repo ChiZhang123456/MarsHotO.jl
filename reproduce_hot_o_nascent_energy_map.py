@@ -199,7 +199,7 @@ def calculate_energy_maps(
     rng = np.random.default_rng(RANDOM_SEED)
     energy_centers_ev = 0.5 * (ENERGY_EDGES_EV[:-1] + ENERGY_EDGES_EV[1:])
     energy_bin_width_ev = np.diff(ENERGY_EDGES_EV)
-    probability_density_ev1 = np.empty(
+    energy_bin_probability = np.empty(
         (len(profile), len(energy_centers_ev)),
         dtype=float,
     )
@@ -218,16 +218,16 @@ def calculate_energy_maps(
             batch_counts, _ = np.histogram(energies_ev, bins=ENERGY_EDGES_EV)
             counts += batch_counts
             reactions_remaining -= batch_size
-        probability_density_ev1[altitude_index, :] = (
-            counts / counts.sum() / energy_bin_width_ev
-        )
+        energy_bin_probability[altitude_index, :] = counts / counts.sum()
 
     spectral_production_cm3s_ev1 = (
-        profile["Q_hotO_cm3s"].to_numpy()[:, None] * probability_density_ev1
+        profile["Q_hotO_cm3s"].to_numpy()[:, None]
+        * energy_bin_probability
+        / energy_bin_width_ev
     )
     return (
         energy_centers_ev,
-        probability_density_ev1,
+        energy_bin_probability,
         spectral_production_cm3s_ev1,
     )
 
@@ -235,7 +235,7 @@ def calculate_energy_maps(
 def save_source_data(
     profile: pd.DataFrame,
     energy_centers_ev: np.ndarray,
-    probability_density_ev1: np.ndarray,
+    energy_bin_probability: np.ndarray,
     spectral_production_cm3s_ev1: np.ndarray,
 ) -> None:
     altitude_grid_km, energy_grid_ev = np.meshgrid(
@@ -247,7 +247,7 @@ def save_source_data(
         {
             "altitude_km": altitude_grid_km.ravel(),
             "energy_eV": energy_grid_ev.ravel(),
-            "probability_density_eV-1": probability_density_ev1.ravel(),
+            "energy_bin_probability": energy_bin_probability.ravel(),
             "spectral_production_cm-3_s-1_eV-1": (
                 spectral_production_cm3s_ev1.ravel()
             ),
@@ -271,7 +271,7 @@ def escape_energy_ev(altitude_km: np.ndarray) -> np.ndarray:
 def make_combined_figure(
     altitude_km: np.ndarray,
     energy_centers_ev: np.ndarray,
-    probability_density_ev1: np.ndarray,
+    energy_bin_probability: np.ndarray,
     spectral_production_cm3s_ev1: np.ndarray,
 ) -> plt.Figure:
     configure_matplotlib()
@@ -282,9 +282,9 @@ def make_combined_figure(
         sharey=True,
         constrained_layout=True,
     )
-    positive_values = probability_density_ev1[probability_density_ev1 > 0.0]
+    positive_values = energy_bin_probability[energy_bin_probability > 0.0]
     probability_image = axes[0].imshow(
-        probability_density_ev1,
+        energy_bin_probability,
         origin="lower",
         aspect="auto",
         extent=(
@@ -323,7 +323,9 @@ def make_combined_figure(
         ax=axes[0],
         pad=0.03,
     )
-    probability_colorbar.set_label(r"Probability density (eV$^{-1}$)")
+    probability_colorbar.set_label(
+        f"Probability per {np.diff(ENERGY_EDGES_EV)[0]:.3f} eV bin"
+    )
 
     log_production = np.log10(
         np.maximum(spectral_production_cm3s_ev1, 1.0e-6)
@@ -383,20 +385,20 @@ def main() -> None:
     profile = calculate_derived_profiles(profile)
     (
         energy_centers_ev,
-        probability_density_ev1,
+        energy_bin_probability,
         spectral_production_cm3s_ev1,
     ) = calculate_energy_maps(profile)
     save_source_data(
         profile,
         energy_centers_ev,
-        probability_density_ev1,
+        energy_bin_probability,
         spectral_production_cm3s_ev1,
     )
 
     combined_figure = make_combined_figure(
         profile["altitude_km"].to_numpy(),
         energy_centers_ev,
-        probability_density_ev1,
+        energy_bin_probability,
         spectral_production_cm3s_ev1,
     )
     combined_figure.savefig(OUTPUT_FIGURE, dpi=400, bbox_inches="tight")
@@ -409,6 +411,9 @@ def main() -> None:
     relative_error = np.max(
         np.abs(integrated_production - profile["Q_hotO_cm3s"].to_numpy())
         / profile["Q_hotO_cm3s"].to_numpy()
+    )
+    probability_sum_error = np.max(
+        np.abs(np.sum(energy_bin_probability, axis=1) - 1.0)
     )
     peak_index = np.unravel_index(
         np.argmax(spectral_production_cm3s_ev1),
@@ -434,6 +439,7 @@ def main() -> None:
         "Mean vibrational energy added per reaction: "
         f"{np.sum(VIBRATIONAL_PROBABILITY * VIBRATIONAL_QUANTUM_NUMBER) * VIBRATIONAL_QUANTUM_ENERGY_EV:.6f} eV"
     )
+    print(f"Maximum probability sum error: {probability_sum_error:.3e}")
     print(f"Maximum spectral integration relative error: {relative_error:.3e}")
     print(
         "Maximum spectral production: "
