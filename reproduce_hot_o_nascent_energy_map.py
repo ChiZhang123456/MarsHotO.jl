@@ -282,7 +282,6 @@ def make_combined_figure(
         sharey=True,
         constrained_layout=True,
     )
-    positive_values = energy_bin_probability[energy_bin_probability > 0.0]
     probability_image = axes[0].imshow(
         energy_bin_probability,
         origin="lower",
@@ -296,7 +295,7 @@ def make_combined_figure(
         interpolation=PLOT_INTERPOLATION,
         cmap="turbo",
         vmin=0.0,
-        vmax=float(np.percentile(positive_values, 99.5)),
+        vmax=0.04,
         rasterized=True,
     )
     axes[0].plot(
@@ -322,6 +321,8 @@ def make_combined_figure(
         probability_image,
         ax=axes[0],
         pad=0.03,
+        ticks=np.arange(0.0, 0.041, 0.01),
+        format="%.2f",
     )
     probability_colorbar.set_label(
         f"Probability per {np.diff(ENERGY_EDGES_EV)[0]:.3f} eV bin"
