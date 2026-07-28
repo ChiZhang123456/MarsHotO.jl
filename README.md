@@ -83,6 +83,20 @@ Plots O2+ density, neutral/ion/electron temperatures, and hot O production rate 
 Plots normalized 300 K Maxwellian velocity-component and kinetic-energy
 probability densities together with the isotropic direction-cosine distribution.
 
+### Two opposite hot O trajectory example
+
+Launch two O atoms from 180 km with exactly opposite initial velocities and
+3.495 eV per atom, record every collision, and plot their trajectories,
+energies, COM scattering angles, and collision partners:
+
+```bash
+julia --project=. examples/run_two_opposite_hot_o.jl
+python examples/plot_two_opposite_hot_o.py
+```
+
+The detailed trajectory and collision tables are written locally under
+`examples/output/` and are not committed.
+
 ### Complete Rahmati Monte Carlo example
 
 Run the Julia transport model and then plot the residence-time altitude-energy
@@ -217,6 +231,10 @@ julia --project=. -e "using Pkg; Pkg.test()"
 ### Monte Carlo hot O altitude-energy distribution
 
 ![Monte Carlo hot O altitude-energy distribution](examples/figures/hot_o_altitude_energy_distribution.png)
+
+### Two opposite hot O collision trajectories
+
+![Two opposite hot O collision trajectories](examples/figures/two_opposite_hot_o_collision_trajectories.png)
 
 ## References
 
