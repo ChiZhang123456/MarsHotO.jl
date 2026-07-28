@@ -151,29 +151,30 @@ $90^\circ$ 以后不存在可继续定义方向的入射粒子速度，不能把
 
 ## 5. 能量损失如何由散射角决定
 
-入射粒子的剩余能量比例为
+Kallio 查找表给出的是 LAB 偏转角，而 Rahmati 博士论文公式 2.19 使用的是
+COM 散射角。因此程序首先进行角度转换：
 
 ```math
-\frac{E_1'}{E_1}
+\theta_{\mathrm{COM}}
 =
-\left(\frac{v_1'}{v_1}\right)^2.
+\theta_{\mathrm{LAB}}
++
+\arcsin\left(
+\frac{m_1}{m_2}\sin\theta_{\mathrm{LAB}}
+\right).
 ```
 
-因此能量损失比例为
+然后使用 Rahmati 公式计算入射热 O 的能量损失：
 
 ```math
 \frac{\Delta E_1}{E_1}
 =
-1-
-\left[
-\frac{
-r\cos\Theta_{\mathrm{LAB}}
-+
-\sqrt{1-r^2\sin^2\Theta_{\mathrm{LAB}}}
-}
-{1+r}
-\right]^2.
+\frac{2m_1m_2}{(m_1+m_2)^2}
+\left(1-\cos\theta_{\mathrm{COM}}\right).
 ```
+
+这个结果与前一节的严格 LAB 两体速度公式完全等价。LAB 角不能直接代入
+Rahmati 公式，必须先转换为 COM 角。
 
 小角度散射通常只引起很小的方向改变和能量损失。大角度散射通常会把更多
 能量传给靶粒子。不同靶质量对应不同的能量损失曲线。

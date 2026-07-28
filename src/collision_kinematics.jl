@@ -45,8 +45,13 @@ end
     projectile_mass_kg < target_mass_kg ?
     pi : asin(min(target_mass_kg / projectile_mass_kg, 1.0))
 
-@inline function _lab_speed_ratio(theta_lab_rad, projectile_mass_kg,
-                                  target_mass_kg)
+"""
+Convert a projectile LAB deflection angle to the corresponding COM
+scattering angle for a stationary target.
+"""
+@inline function lab_to_com_scattering_angle(
+    theta_lab_rad, projectile_mass_kg, target_mass_kg,
+)
     theta_max = maximum_lab_scattering_angle(
         projectile_mass_kg, target_mass_kg,
     )
@@ -56,27 +61,39 @@ end
             "LAB scattering angle exceeds the elastic kinematic limit",
         ))
     mass_ratio = projectile_mass_kg / target_mass_kg
-    discriminant = max(
-        1 - (mass_ratio * sin(theta_lab_rad))^2,
-        0.0,
+    theta_lab_rad + asin(clamp(
+        mass_ratio * sin(theta_lab_rad), -1.0, 1.0,
+    ))
+end
+
+@inline function _lab_speed_ratio(theta_lab_rad, projectile_mass_kg,
+                                  target_mass_kg)
+    theta_com_rad = lab_to_com_scattering_angle(
+        theta_lab_rad, projectile_mass_kg, target_mass_kg,
     )
-    max(
-        (mass_ratio * cos(theta_lab_rad) + sqrt(discriminant)) /
-        (1 + mass_ratio),
+    sqrt(max(
+        1 - fractional_energy_loss(
+            theta_com_rad, projectile_mass_kg, target_mass_kg,
+        ),
         0.0,
-    )
+    ))
 end
 
 """
 Fractional projectile-energy loss for a stationary target and a prescribed
-LAB projectile scattering angle, following Kallio and Barabash (2001).
+LAB projectile scattering angle. The angle is converted to COM before using
+Rahmati (2016), Equation 2.19.
 """
 fractional_energy_loss_lab(theta_lab_rad::Real,
                            projectile_mass_kg::Real,
                            target_mass_kg::Real) =
-    1 - _lab_speed_ratio(
-        theta_lab_rad, projectile_mass_kg, target_mass_kg,
-    )^2
+    fractional_energy_loss(
+        lab_to_com_scattering_angle(
+            theta_lab_rad, projectile_mass_kg, target_mass_kg,
+        ),
+        projectile_mass_kg,
+        target_mass_kg,
+    )
 
 """
 Elastic collision for a stationary target with a prescribed LAB projectile

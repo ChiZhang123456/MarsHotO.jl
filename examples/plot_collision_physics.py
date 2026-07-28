@@ -72,18 +72,16 @@ def fractional_energy_loss(
     target_mass_amu: float,
 ) -> np.ndarray:
     mass_ratio = PROJECTILE_MASS_AMU / target_mass_amu
-    discriminant = np.maximum(
-        1.0 - (mass_ratio * np.sin(theta_rad)) ** 2, 0.0
+    theta_com_rad = theta_rad + np.arcsin(
+        np.clip(mass_ratio * np.sin(theta_rad), -1.0, 1.0)
     )
-    speed_ratio = np.maximum(
-        (
-            mass_ratio * np.cos(theta_rad)
-            + np.sqrt(discriminant)
-        )
-        / (1.0 + mass_ratio),
-        0.0,
+    return (
+        2.0
+        * PROJECTILE_MASS_AMU
+        * target_mass_amu
+        / (PROJECTILE_MASS_AMU + target_mass_amu) ** 2
+        * (1.0 - np.cos(theta_com_rad))
     )
-    return 1.0 - speed_ratio**2
 
 
 def total_cross_section(

@@ -88,6 +88,14 @@ end
           fractional_energy_loss_lab(theta_lab, m1, m2)
     @test maximum_lab_scattering_angle(16.0, 16.0) ≈ pi / 2
     @test maximum_lab_scattering_angle(16.0, 44.0) ≈ pi
+    @test MarsHotO.lab_to_com_scattering_angle(
+        deg2rad(60.0), 16.0, 16.0,
+    ) ≈ deg2rad(120.0)
+    theta_com_from_lab = MarsHotO.lab_to_com_scattering_angle(
+        theta_lab, m1, m2,
+    )
+    @test fractional_energy_loss_lab(theta_lab, m1, m2) ≈
+          fractional_energy_loss(theta_com_from_lab, m1, m2)
     @test_throws DomainError fractional_energy_loss_lab(
         deg2rad(91.0), 16.0, 16.0,
     )
