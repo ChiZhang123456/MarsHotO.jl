@@ -374,6 +374,152 @@ def main() -> None:
     )
     plt.close(figure)
 
+    low_altitude = (altitude_km >= 100.0) & (altitude_km <= 300.0)
+    low_altitude_km = altitude_km[low_altitude]
+    low_upward_flux = upward_flux[low_altitude]
+    low_downward_flux = downward_flux[low_altitude]
+    low_positive = np.concatenate(
+        [
+            low_upward_flux[low_upward_flux > 0],
+            low_downward_flux[low_downward_flux > 0],
+        ]
+    )
+    low_vmin = float(np.percentile(np.log10(low_positive), 2))
+    low_vmax = float(np.percentile(np.log10(low_positive), 99))
+    low_figure, low_axes = plt.subplots(
+        1, 2, figsize=(8.2, 3.8), constrained_layout=True, sharey=True,
+    )
+    low_image = None
+    for axis, flux, title, label in zip(
+        low_axes,
+        (low_upward_flux, low_downward_flux),
+        ("Upward, $v_r>0$", "Downward, $v_r<0$"),
+        ("a", "b"),
+    ):
+        positive_flux = flux[flux > 0]
+        log_flux = np.log10(np.maximum(flux, positive_flux.min()))
+        low_image = axis.imshow(
+            log_flux,
+            origin="lower",
+            aspect="auto",
+            extent=(
+                energy_eV[0],
+                energy_eV[-1],
+                low_altitude_km[0],
+                low_altitude_km[-1],
+            ),
+            interpolation="bilinear",
+            cmap="turbo",
+            vmin=low_vmin,
+            vmax=low_vmax,
+            rasterized=True,
+        )
+        axis.set(
+            xlabel="Hot O energy (eV)",
+            title=title,
+            ylim=(100, 300),
+        )
+        axis.text(
+            0.02,
+            0.98,
+            label,
+            transform=axis.transAxes,
+            ha="left",
+            va="top",
+            fontweight="bold",
+        )
+    low_axes[0].set_ylabel("Altitude (km)")
+    low_colorbar = low_figure.colorbar(low_image, ax=low_axes, pad=0.02)
+    low_colorbar.set_label(
+        r"$\log_{10}[\Phi_k\;(\mathrm{cm^{-2}\,s^{-1}\ per\ bin})]$"
+    )
+    low_figure.suptitle(
+        "Directional hot O flux, 100 to 300 km",
+        fontsize=10,
+    )
+    low_figure.savefig(
+        run_directory
+        / "upward_downward_hot_o_crossing_flux_100_300km.png",
+        dpi=400,
+        bbox_inches="tight",
+    )
+    plt.close(low_figure)
+
+    altitude_200_index = int(np.argmin(np.abs(altitude_km - 200.0)))
+    if not np.isclose(altitude_km[altitude_200_index], 200.0):
+        raise RuntimeError("The directional grid does not contain 200 km")
+    upward_200 = upward_flux[altitude_200_index]
+    downward_200 = downward_flux[altitude_200_index]
+    upward_200_error = upward_standard_error[altitude_200_index]
+    downward_200_error = downward_standard_error[altitude_200_index]
+    spectrum_figure, spectrum_axis = plt.subplots(
+        figsize=(5.2, 4.0), constrained_layout=True,
+    )
+    upward_valid = upward_200 > 0
+    downward_valid = downward_200 > 0
+    spectrum_axis.plot(
+        energy_eV[upward_valid],
+        upward_200[upward_valid],
+        color="#2166ac",
+        linewidth=1.5,
+        label="Upward",
+    )
+    upward_error_valid = (
+        upward_valid & (upward_200_error < 0.8 * upward_200)
+    )
+    spectrum_axis.fill_between(
+        energy_eV[upward_error_valid],
+        upward_200[upward_error_valid]
+        - upward_200_error[upward_error_valid],
+        upward_200[upward_error_valid]
+        + upward_200_error[upward_error_valid],
+        color="#2166ac",
+        alpha=0.20,
+        linewidth=0,
+    )
+    spectrum_axis.plot(
+        energy_eV[downward_valid],
+        downward_200[downward_valid],
+        color="#d95f02",
+        linewidth=1.5,
+        label="Downward",
+    )
+    downward_error_valid = (
+        downward_valid & (downward_200_error < 0.8 * downward_200)
+    )
+    spectrum_axis.fill_between(
+        energy_eV[downward_error_valid],
+        downward_200[downward_error_valid]
+        - downward_200_error[downward_error_valid],
+        downward_200[downward_error_valid]
+        + downward_200_error[downward_error_valid],
+        color="#d95f02",
+        alpha=0.20,
+        linewidth=0,
+    )
+    spectrum_axis.set(
+        yscale="log",
+        xlabel="Hot O energy (eV)",
+        ylabel=r"Flux (cm$^{-2}$ s$^{-1}$ per bin)",
+        title="Directional hot O energy spectra at 200 km",
+        xlim=(energy_eV[0], energy_eV[-1]),
+    )
+    positive_spectrum = np.concatenate(
+        [upward_200[upward_valid], downward_200[downward_valid]]
+    )
+    spectrum_axis.set_ylim(
+        positive_spectrum.min() / 2,
+        positive_spectrum.max() * 2,
+    )
+    spectrum_axis.grid(True, color="0.88", linewidth=0.6)
+    spectrum_axis.legend(frameon=False)
+    spectrum_figure.savefig(
+        run_directory / "upward_downward_hot_o_flux_spectrum_200km.png",
+        dpi=400,
+        bbox_inches="tight",
+    )
+    plt.close(spectrum_figure)
+
     metadata = {
         "batch_files": len(paths),
         "primary_particles": sum(item["primary"] for item in headers),
