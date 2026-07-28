@@ -20,8 +20,3 @@ struct CollisionTarget
     mass_kg::Float64
     sigma_3eV_m2::Float64
 end
-
-struct ScatteringAngleDistribution
-    random_number::Vector{Float64}
-    theta_com_rad::Vector{Float64}
-end

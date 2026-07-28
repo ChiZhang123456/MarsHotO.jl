@@ -14,14 +14,8 @@ OUTPUT = (
     ROOT / "examples" / "figures" /
     "hot_o_collision_cross_sections_and_scattering.png"
 )
-SCATTERING_FILE = (
-    ROOT / "data" / "cross_sections" /
-    "scattering_angle_distribution.txt"
-)
-
 PROJECTILE_MASS_AMU = 16.0
-RANDOM_SEED = 20260727
-SAMPLE_COUNT = 1_000_000
+RAHMATI_BETA = -1.85
 
 TARGETS = {
     "O": (16.0, 6.4e-15),
@@ -59,12 +53,11 @@ def configure_matplotlib() -> None:
     )
 
 
-def load_scattering_distribution() -> tuple[np.ndarray, np.ndarray]:
-    table = np.loadtxt(
-        SCATTERING_FILE, comments="#", skiprows=9, dtype=float
-    )
-    order = np.argsort(table[:, 0])
-    return table[order, 0], table[order, 1]
+def inverse_scattering_angle(random_number: np.ndarray) -> np.ndarray:
+    """Rahmati inverse CDF with theta_min = 0."""
+    exponent = RAHMATI_BETA + 2.0
+    theta_rad = 2.0 * np.arcsin(random_number ** (1.0 / exponent))
+    return np.rad2deg(theta_rad)
 
 
 def fractional_energy_loss(
@@ -89,14 +82,8 @@ def total_cross_section(
 
 def make_figure() -> plt.Figure:
     configure_matplotlib()
-    random_grid, angle_grid_deg = load_scattering_distribution()
-    theta_deg = np.linspace(0.12, 180.0, 2000)
+    theta_deg = np.linspace(0.0, 180.0, 2000)
     theta_rad = np.deg2rad(theta_deg)
-
-    rng = np.random.default_rng(RANDOM_SEED)
-    samples_deg = np.interp(
-        rng.random(SAMPLE_COUNT), random_grid, angle_grid_deg
-    )
 
     figure, axes = plt.subplots(
         1,
@@ -136,37 +123,21 @@ def make_figure() -> plt.Figure:
     )
     axes[0].legend(loc="best")
 
-    bin_edges_deg = np.linspace(0.0, 180.0, 91)
-    sampled_count, _ = np.histogram(samples_deg, bins=bin_edges_deg)
-    bin_width_deg = np.diff(bin_edges_deg)
-    sampled_density = sampled_count / (SAMPLE_COUNT * bin_width_deg)
-    expected_fraction = np.diff(
-        np.interp(bin_edges_deg, angle_grid_deg, random_grid)
-    )
-    expected_density = expected_fraction / bin_width_deg
-    bin_center = 0.5 * (bin_edges_deg[:-1] + bin_edges_deg[1:])
-    axes[1].stairs(
-        sampled_density,
-        bin_edges_deg,
-        fill=True,
-        color="#E07B39",
-        alpha=0.55,
-        label=f"Monte Carlo, N = {SAMPLE_COUNT:,}",
-    )
+    random_number = np.linspace(0.0, 1.0, 4000)
+    sampled_angle_deg = inverse_scattering_angle(random_number)
     axes[1].plot(
-        bin_center,
-        expected_density,
-        color="#222222",
-        linewidth=1.3,
-        label="Lookup-table probability",
+        random_number,
+        sampled_angle_deg,
+        color="#2878B5",
+        linewidth=1.5,
+        label=r"$\beta=-1.85,\ \theta_{\min}=0^\circ$",
     )
     axes[1].set(
-        xlim=(0.0, 180.0),
-        yscale="log",
-        ylim=(1.0e-6, 1.0),
-        xlabel=r"Empirical COM scattering angle, $\theta$ (deg)",
-        ylabel=r"Probability density (deg$^{-1}$)",
-        title="Kallio and Barabash angle distribution",
+        xlim=(0.0, 1.0),
+        ylim=(0.0, 180.0),
+        xlabel="Uniform random number, R",
+        ylabel=r"COM scattering angle, $\theta$ (deg)",
+        title="Rahmati inverse-CDF sampling",
     )
     axes[1].legend(loc="best")
 
@@ -183,7 +154,7 @@ def make_figure() -> plt.Figure:
         r"CO$_2$": COLORS[r"CO$_2$"],
     }
     for species, mass_amu in energy_loss_groups.items():
-        species_theta_deg = np.linspace(0.12, 180.0, 2000)
+        species_theta_deg = np.linspace(0.0, 180.0, 2000)
         axes[2].plot(
             species_theta_deg,
             fractional_energy_loss(
@@ -216,7 +187,7 @@ def make_figure() -> plt.Figure:
         axis.grid(True, which="both", color="0.91", linewidth=0.5)
 
     figure.suptitle(
-        "Hot O collision physics with Kallio and Barabash angle sampling",
+        "Hot O collision physics with Rahmati COM angle sampling",
         fontsize=10,
     )
     return figure

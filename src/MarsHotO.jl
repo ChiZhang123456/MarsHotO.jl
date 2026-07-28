@@ -21,13 +21,13 @@ include("two_fluid/types.jl")
 include("two_fluid/two_stream.jl")
 
 export AtmosphereProfile, CollisionTarget, DRBranch, HotOParticle
-export ScatteringAngleDistribution
 export MARS_RADIUS_M, O_MASS_KG, EV_J
 export load_mgitm_subsolar_profile, interpolate_profile
 export dissociative_recombination_coefficient, hot_o_production_rate
 export load_reaction_branches, load_collision_targets
 export total_cross_section, collision_coefficient, choose_collision_target
-export load_scattering_angle_distribution, scattering_angle_cdf
+export differential_cross_section, scattering_angle_pdf
+export scattering_angle_cdf
 export sample_scattering_angle, sample_azimuth
 export fractional_energy_loss, fractional_energy_loss_lab
 export maximum_lab_scattering_angle

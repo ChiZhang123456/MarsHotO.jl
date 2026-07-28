@@ -7,17 +7,13 @@ model and use
 \sigma(E)=\sigma(3\ \mathrm{eV})(E/3\ \mathrm{eV})^{-0.2}.
 ```
 
-The scattering angles are read from
-`scattering_angle_distribution.txt`. This file is copied from MarsASPEN and
-is an inverse CDF mapping from a uniform random number to the projectile
-scattering angle. The source table labels the angle as LAB and was digitized
-from Figure 2 of Kallio and Barabash (2001). MarsHotO intentionally treats
-the tabulated angle values as an empirical COM distribution before applying
-two-body kinematics.
+The active scattering model is the analytical Rahmati fit to the Kharchenko
+O and O differential cross section. It is implemented in
+`src/shared/scattering.jl`, is sampled in COM by inverse transform, and uses
+the complete angular interval without a 10 degree cutoff.
 
-The complete tabulated angular range is used. MarsHotO applies no additional
-minimum angle cutoff and therefore uses the full total collision cross
-section.
+`scattering_angle_distribution.txt` is retained only as a MarsASPEN reference
+table. It is not used by the active MarsHotO runtime.
 
 Reference:
 

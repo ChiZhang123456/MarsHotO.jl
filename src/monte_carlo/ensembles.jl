@@ -1,7 +1,6 @@
 Base.@kwdef struct RahmatiMonteCarloConfig
     primary_particles::Int = 10_000
     seed::Int = 20260727
-    scattering_angle_path::String = DEFAULT_SCATTERING_ANGLE_PATH
     minimum_energy_eV::Float64 = 0.01
     maximum_altitude_m::Float64 = 110_000e3
     maximum_steps_per_particle::Int = 2_000_000
@@ -112,9 +111,6 @@ function run_hot_o_corona(
     macro_rate_s1 = total_source_rate_s1 / config.primary_particles
     vibration_probability, vibration_quantum_eV =
         _load_vibration(chemistry_path)
-    scattering_distribution = load_scattering_angle_distribution(
-        config.scattering_angle_path,
-    )
 
     queue = HotOParticle[]
     sizehint!(queue, min(config.primary_particles, 1_000_000))
@@ -174,9 +170,7 @@ function run_hot_o_corona(
                 target = choose_collision_target(
                     rng, targets, local_state.density_m3, energy_eV,
                 )
-                theta_com = sample_scattering_angle(
-                    rng, scattering_distribution,
-                )
+                theta_com = sample_scattering_angle(rng)
                 projectile_after, target_after = elastic_collision(
                     particle.velocity_m_s, (0.0, 0.0, 0.0),
                     O_MASS_KG, target.mass_kg,

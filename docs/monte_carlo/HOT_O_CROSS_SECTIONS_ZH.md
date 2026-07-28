@@ -74,7 +74,15 @@ P(s\mid\mathrm{coll})
 
 所以目标选择同时取决于局地中性密度和该碰撞对的总截面。
 
-当前散射角分布采用 Kallio 与 Barabash (2001) 给出的高能 H 在火星大气中
-碰撞的结果。后续获得合适的热 O 散射角数据后，可以补充或替换为 O 与不同
-中性成分的专属分布。角度抽样和两体碰撞计算见
+当前散射角分布采用 Rahmati 对 Kharchenko O 与 O 微分截面的解析拟合：
+
+```math
+\frac{d\sigma}{d\Omega}
+=\alpha\sin^\beta\left(\frac{\theta_{\mathrm{COM}}}{2}\right),
+\qquad \beta=-1.85.
+```
+
+角度概率密度包含立体角 Jacobian $\sin\theta_{\mathrm{COM}}$。当前模型使用
+$0\le\theta_{\mathrm{COM}}\le\pi$ 的完整范围，不设置 10 度截断。
+角度抽样和两体碰撞计算见
 [COM 散射角与两体碰撞](HOT_O_SCATTERING_TWO_BODY_ZH.md)。

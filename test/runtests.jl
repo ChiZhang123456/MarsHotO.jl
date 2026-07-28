@@ -89,28 +89,23 @@ end
 end
 
 @testset "Scattering distribution" begin
-    distribution = load_scattering_angle_distribution(joinpath(
-        ROOT, "data", "cross_sections",
-        "scattering_angle_distribution.txt",
-    ))
-    @test first(distribution.random_number) == 0.0
-    @test last(distribution.random_number) == 1.0
-    @test issorted(distribution.random_number)
-    @test issorted(distribution.theta_com_rad)
-    @test rad2deg(first(distribution.theta_com_rad)) ≈ 0.12
-    @test rad2deg(last(distribution.theta_com_rad)) ≈ 180.0
-    median_angle = scattering_angle_cdf(
-        deg2rad(0.335989), distribution,
-    )
-    @test median_angle ≈ 0.5 atol=2e-5
+    beta = -1.85
+    exponent = beta + 2
+    @test scattering_angle_cdf(0.0) == 0.0
+    @test scattering_angle_cdf(pi) == 1.0
+    median_angle = 2asin(0.5^(1 / exponent))
+    @test scattering_angle_cdf(median_angle) ≈ 0.5
+    for probability in range(0.0, 1.0; length=101)
+        theta = 2asin(probability^(1 / exponent))
+        @test scattering_angle_cdf(theta) ≈ probability atol=1e-13
+    end
     rng = Xoshiro(73)
-    samples = [sample_scattering_angle(rng, distribution)
-               for _ in 1:100_000]
-    @test all(first(distribution.theta_com_rad) .<= samples .<= pi)
-    empirical = sum(x <= deg2rad(1.0) for x in samples) / length(samples)
-    expected = scattering_angle_cdf(deg2rad(1.0), distribution)
+    samples = [sample_scattering_angle(rng) for _ in 1:100_000]
+    @test all(0.0 .<= samples .<= pi)
+    empirical = sum(x <= deg2rad(10.0) for x in samples) / length(samples)
+    expected = scattering_angle_cdf(deg2rad(10.0))
     @test abs(empirical - expected) < 0.005
-    @test any(samples .> pi / 2)
+    @test minimum(samples) < deg2rad(0.01)
 end
 
 @testset "Elastic collision" begin

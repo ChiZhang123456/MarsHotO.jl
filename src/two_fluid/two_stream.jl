@@ -21,8 +21,8 @@ end
 """
 Construct collision redistribution probabilities for the two-stream solver.
 
-The complete MarsASPEN inverse CDF is interpreted as an empirical COM angle
-distribution and the full Rahmati total cross sections are used. No
+The Rahmati fit to the Kharchenko COM angular distribution and the full
+Rahmati total cross sections are used. The minimum angle is zero, so no
 small-angle cutoff or cross-section rescaling is applied. The incoming stream
 is represented by |mu| = mean_pitch_cosine.
 """
@@ -32,7 +32,6 @@ function build_two_stream_redistribution(
     mean_pitch_cosine=0.5,
     samples=20_000,
     seed=73,
-    distribution=default_scattering_angle_distribution(),
 )
     0 < mean_pitch_cosine <= 1 ||
         error("Mean pitch-angle cosine must be in (0, 1]")
@@ -54,9 +53,7 @@ function build_two_stream_redistribution(
             speed = sqrt(2energy_eV * EV_J / O_MASS_KG)
             incoming = _scale(speed, incoming_direction)
             for _ in 1:samples
-                theta = sample_scattering_angle(
-                    rng, distribution,
-                )
+                theta = sample_scattering_angle(rng)
                 projectile, recoil = elastic_collision(
                     incoming, (0.0, 0.0, 0.0),
                     O_MASS_KG, target.mass_kg,

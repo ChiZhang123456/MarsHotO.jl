@@ -8,8 +8,6 @@ step. Returns a named tuple with the final state and stopping reason.
 """
 function transport_particle!(rng, particle::HotOParticle,
                              atmosphere::AtmosphereProfile, targets;
-                             scattering_distribution=
-                                 default_scattering_angle_distribution(),
                              step_m=1000.0, lower_altitude_m=80e3,
                              upper_altitude_m=1000e3, max_steps=1_000_000)
     optical_depth_to_collision = -log(rand(rng))
@@ -44,9 +42,7 @@ function transport_particle!(rng, particle::HotOParticle,
             target = choose_collision_target(
                 rng, targets, local_state.density_m3, energy_eV,
             )
-            theta = sample_scattering_angle(
-                rng, scattering_distribution,
-            )
+            theta = sample_scattering_angle(rng)
             phi = sample_azimuth(rng)
             particle.velocity_m_s, _ = elastic_collision(
                 particle.velocity_m_s, (0.0, 0.0, 0.0),

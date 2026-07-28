@@ -1,190 +1,250 @@
-# COM 散射角与两体碰撞
+# Rahmati COM 散射角与两体碰撞
 
-## 1. 当前角度分布约定
+## 1. 当前模型采用的散射角分布
 
-MarsHotO 读取
-`data/cross_sections/scattering_angle_distribution.txt`。这个查找表来自
-MarsASPEN，并由 Kallio 与 Barabash (2001) 的图数字化得到。
-
-原始查找表把第二列标记为 H 或 H ENA 的 LAB 散射角。当前 MarsHotO 按照模型
-约定，将这些角度数值直接作为热 O 碰撞的经验 COM 散射角使用。这是一项明确
-的经验近似，不表示 Kallio 原文把该角度定义为 COM。
-
-表格是一个逆累积分布：
+MarsHotO 使用 Rahmati 博士论文第 2.2.3 和 2.2.4 节给出的模型。该模型采用
+Kharchenko 等人计算的 O 与 O 微分碰撞截面，并使用解析函数拟合：
 
 ```math
-U\sim\mathcal U(0,1),
-```
-
-```math
-\theta_{\mathrm{COM}}=F^{-1}(U).
-```
-
-程序在表格相邻点之间进行线性插值。表中角度约为 $0.12^\circ$ 到
-$180^\circ$。不设置人为的最小角度截断。方位角独立抽取：
-
-```math
-\phi=2\pi U_\phi,\qquad U_\phi\sim\mathcal U(0,1).
-```
-
-## 2. LAB 和 COM 分别是什么
-
-LAB 是相对火星静止的坐标系。热 O 的位置、速度、重力轨迹和最终输出都在
-LAB 中描述。
-
-COM 是两个碰撞粒子的质心参考系。碰撞前的质心速度为
-
-```math
-\mathbf V_{\mathrm{COM}}
+\frac{d\sigma}{d\Omega}
 =
-\frac{m_1\mathbf v_1+m_2\mathbf v_2}
-{m_1+m_2}.
+\alpha\sin^\beta\left(\frac{\theta_{\mathrm{COM}}}{2}\right),
 ```
 
-当前模型采用静止靶近似：
+其中
 
 ```math
-\mathbf v_2=0.
+\alpha=0.36\times10^{-16}\ \mathrm{cm^2\,sr^{-1}},
+\qquad
+\beta=-1.85.
 ```
 
-相对速度为
+$\theta_{\mathrm{COM}}$ 是质心坐标系中的散射角。当前模型假设所有 O 与中性
+成分碰撞都采用相同形式的 COM 角分布。
+
+## 2. 为什么概率中要包含 $\sin\theta$
+
+微分截面是单位立体角内的截面。球坐标中的立体角元为
 
 ```math
-\mathbf g=\mathbf v_1-\mathbf v_2.
-```
-
-模型抽取的 $\theta_{\mathrm{COM}}$ 是碰撞前后相对速度方向的夹角：
-
-```math
-\cos\theta_{\mathrm{COM}}
+d\Omega
 =
-\frac{\mathbf g\cdot\mathbf g'}
-{|\mathbf g||\mathbf g'|}.
+\sin\theta\,d\theta\,d\phi.
 ```
 
-## 3. Ali Rahmati 的能量损失公式
+因此 COM 极角的一维概率密度不是单独的 $d\sigma/d\Omega$，而是
 
-Rahmati 博士论文第 2.2.4 节公式 2.19 给出入射热 O 的相对能量损失：
+```math
+p(\theta)
+\propto
+\frac{d\sigma}{d\Omega}\sin\theta.
+```
+
+代入 Rahmati 拟合并归一化后得到
+
+```math
+p(\theta)
+=
+\frac{\beta+2}{2}
+\sin^{\beta+1}\left(\frac{\theta}{2}\right)
+\cos\left(\frac{\theta}{2}\right),
+\qquad
+0\le\theta\le\pi.
+```
+
+虽然 $\theta$ 接近零时概率密度很大，但因为 $\beta+2=0.15>0$，从
+$0^\circ$ 开始的积分仍然有限。
+
+## 3. 不使用 10° 截断
+
+Rahmati 的历史 two-stream 计算曾采用 $\theta_{\min}=10^\circ$。当前
+MarsHotO 按照本项目约定令
+
+```math
+\theta_{\min}=0^\circ.
+```
+
+因此：
+
+1. 保留所有小于 $10^\circ$ 的前向散射。
+2. 散射角范围为 $0^\circ$ 到 $180^\circ$。
+3. 碰撞频率使用完整总截面。
+4. 不使用角度保留比例缩放总截面。
+
+## 4. CDF 和逆变换抽样
+
+从零度积分到 $\theta$，可以得到累积分布：
+
+```math
+F(\theta)
+=
+\sin^{\beta+2}\left(\frac{\theta}{2}\right).
+```
+
+计算机生成均匀随机数
+
+```math
+R\sim\mathcal U(0,1).
+```
+
+令 $R=F(\theta)$，反解得到
+
+```math
+\boxed{
+\theta_{\mathrm{COM}}(R)
+=
+2\arcsin\left(
+R^{1/(\beta+2)}
+\right)
+}
+```
+
+因为
+
+```math
+\frac{1}{\beta+2}
+=
+\frac{1}{0.15}
+\approx6.667,
+```
+
+大部分随机数会产生非常小的 COM 散射角。只有 $R$ 非常接近 1 时，角度才会
+迅速接近 $180^\circ$。
+
+如果以后需要加入非零最小角度，一般形式为
+
+```math
+\theta(R)
+=
+2\arcsin
+\left[
+R\left(1-C_{\min}\right)+C_{\min}
+\right]^{1/(\beta+2)},
+```
+
+其中
+
+```math
+C_{\min}
+=
+\sin^{\beta+2}\left(\frac{\theta_{\min}}{2}\right).
+```
+
+当前程序中 $C_{\min}=0$。
+
+## 5. Ali Rahmati 的能量损失公式
+
+Rahmati 博士论文公式 2.19 给出入射热 O 的相对能量损失：
 
 ```math
 \boxed{
 \frac{\Delta E}{E}
 =
-\frac{2m_1m_2}{(m_1+m_2)^2}
+\frac{2m_{\mathrm O}m_s}
+{(m_{\mathrm O}+m_s)^2}
 \left(1-\cos\theta_{\mathrm{COM}}\right)
 }
 ```
 
-其中：
+这里 $m_{\mathrm O}$ 是入射 O 的质量，$m_s$ 是靶中性粒子的质量。逆变换抽到
+的角度本身就是 COM 角，因此可以直接代入该公式，不需要进行 LAB 到 COM 的
+角度转换。
 
-* $m_1$ 是入射热 O 的质量。
-* $m_2$ 是靶中性粒子的质量。
-* $\theta_{\mathrm{COM}}$ 是 COM 散射角。
-
-当前代码把查找表抽到的角度直接代入这个公式，不再把它当作 LAB 角，也不进行
-LAB 到 COM 的角度转换。
-
-对于 O 撞 O，$m_1=m_2$，所以
+对于 O 撞 O，
 
 ```math
 \frac{\Delta E}{E}
 =
-\frac12\left(1-\cos\theta_{\mathrm{COM}}\right)
+\frac12(1-\cos\theta_{\mathrm{COM}})
 =
 \sin^2\left(\frac{\theta_{\mathrm{COM}}}{2}\right).
 ```
 
-因此：
+所以 COM 角为 $90^\circ$ 时损失 50%，为 $180^\circ$ 时损失 100%。
 
-| COM 角 | $\Delta E/E$ |
-|---:|---:|
-| $0^\circ$ | 0 |
-| $60^\circ$ | 0.25 |
-| $90^\circ$ | 0.50 |
-| $120^\circ$ | 0.75 |
-| $180^\circ$ | 1.00 |
+## 6. 从 COM 转换回相对火星静止的 LAB
 
-这与把同一数值解释成 LAB 角完全不同。现在 O 撞 O 的角度可以覆盖整个
-$0^\circ$ 到 $180^\circ$ COM 范围。
+碰撞前的质心速度为
 
-## 4. 如何计算碰撞后的两个速度
+```math
+\mathbf V_{\mathrm{COM}}
+=
+\frac{m_{\mathrm O}\mathbf v_{\mathrm O}
++m_s\mathbf v_s}
+{m_{\mathrm O}+m_s}.
+```
 
-首先围绕碰撞前相对速度方向旋转 $\theta_{\mathrm{COM}}$ 和 $\phi$，得到
-$\mathbf g'$。弹性碰撞满足
+当前模型采用静止靶近似：
+
+```math
+\mathbf v_s=0.
+```
+
+碰撞前相对速度为
+
+```math
+\mathbf g
+=
+\mathbf v_{\mathrm O}-\mathbf v_s.
+```
+
+程序按照抽到的 $\theta_{\mathrm{COM}}$ 和均匀方位角 $\phi$ 旋转
+$\mathbf g$，得到 $\mathbf g'$。弹性碰撞中
 
 ```math
 |\mathbf g'|=|\mathbf g|.
 ```
 
-然后转换回 LAB：
+碰撞后的 LAB 速度为
 
 ```math
-\mathbf v_1'
+\mathbf v_{\mathrm O}'
 =
 \mathbf V_{\mathrm{COM}}
 +
-\frac{m_2}{m_1+m_2}\mathbf g',
+\frac{m_s}{m_{\mathrm O}+m_s}\mathbf g',
 ```
 
 ```math
-\mathbf v_2'
+\mathbf v_s'
 =
 \mathbf V_{\mathrm{COM}}
 -
-\frac{m_1}{m_1+m_2}\mathbf g'.
+\frac{m_{\mathrm O}}{m_{\mathrm O}+m_s}\mathbf g'.
 ```
 
-这些公式同时保证动量守恒
+这些关系同时满足线动量守恒和总动能守恒。
 
-```math
-m_1\mathbf v_1+m_2\mathbf v_2
-=
-m_1\mathbf v_1'+m_2\mathbf v_2',
-```
+## 7. 次级热 O
 
-以及总动能守恒
+如果靶粒子是 O，碰撞后的 $\mathbf v_s'$ 属于反冲 O。如果其能量高于最低
+追踪能量，程序会把它作为次级热 O 加入粒子队列，并继承相同宏粒子权重。
 
-```math
-\frac12m_1v_1^2+\frac12m_2v_2^2
-=
-\frac12m_1v_1'^2+\frac12m_2v_2'^2.
-```
-
-热 O 损失的动能全部转移给靶粒子。
-
-## 5. 次级热 O
-
-如果靶粒子是 O，碰撞后的 $\mathbf v_2'$ 属于另一个 O 原子。如果它的能量
-高于最低追踪能量，程序把它作为次级热 O 加入待追踪队列。次级 O 继承相同的
-宏粒子权重。
-
-## 6. 一次碰撞的计算顺序
+## 8. 一次碰撞的计算顺序
 
 1. 用中性密度和总截面判断是否发生碰撞。
 2. 按 $n_s\sigma_s$ 选择靶成分。
-3. 从 Kallio 查找表抽取一个数值，并将其解释为
-   $\theta_{\mathrm{COM}}$。
-4. 独立抽取方位角 $\phi$。
-5. 在 COM 中旋转相对速度。
-6. 转换回 LAB，得到入射粒子和靶粒子的碰撞后速度。
-7. 在 LAB 中继续追踪入射热 O。
-8. 如果靶粒子是 O，则按需要继续追踪次级热 O。
+3. 生成均匀随机数 $R$。
+4. 用逆 CDF 得到 $\theta_{\mathrm{COM}}$。
+5. 独立抽取均匀方位角 $\phi$。
+6. 在 COM 中旋转相对速度。
+7. 转换回 LAB，得到入射粒子和靶粒子的碰撞后速度。
+8. 在 LAB 中继续追踪热 O。
+9. 如果靶是 O，则按需要追踪次级热 O。
 
-## 7. 模型近似
+## 9. 当前近似
 
-Kallio 与 Barabash (2001) 的原始分布描述高能 H 或 H ENA，并且原表标记为
-LAB 角。当前模型把相同数值作为热 O 的 COM 角使用，目的是与 Rahmati 的
-COM 能量损失公式和 COM 两体运动学直接结合。
-
-未来获得 O 与 CO2、O、N2、CO 和 O2 各自的微分截面后，应使用专属的
-COM 角分布替换当前经验分布。
+1. 不同靶成分共同采用 Rahmati 对 Kharchenko O 与 O 结果的角分布拟合。
+2. 靶中性粒子在碰撞前设为静止。
+3. 不使用 10°截断，因此会显式模拟数量很多、单次能量损失很小的前向碰撞。
+4. 后续获得各碰撞对的能量相关微分截面后，应分别替换共同角分布。
 
 ## 参考文献
 
-Kallio, E., and Barabash, S. (2001), Atmospheric effects of precipitating
-energetic hydrogen atoms on the Martian atmosphere, Journal of Geophysical
-Research: Space Physics, 106(A1), 165 to 177,
-https://doi.org/10.1029/2000JA002003.
-
 Rahmati, A. (2016), Oxygen Exosphere of Mars: Evidence from Pickup Ions
-Measured by MAVEN, PhD dissertation, University of Kansas, Section 2.2.4.
+Measured by MAVEN, PhD dissertation, University of Kansas, Sections 2.2.3
+and 2.2.4.
+
+Kharchenko, V., Dalgarno, A., Zygelman, B., and Yee, J. H. (2000), Energy
+transfer in collisions of oxygen atoms in the terrestrial atmosphere,
+Journal of Geophysical Research.
