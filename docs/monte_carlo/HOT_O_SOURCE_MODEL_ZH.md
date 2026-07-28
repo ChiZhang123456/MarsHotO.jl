@@ -2,12 +2,46 @@
 
 ## 1. 这一部分要计算什么
 
-源模型要得到两个量：
+源模型首先要得到两个基本量：
 
-1. 每个高度每秒产生多少个热 O，即 $Q_{\mathrm{hotO}}(z)$。
-2. 在该高度产生的热 O 具有怎样的能量概率分布，即 $p(E\mid z)$。
+1. 每个高度、每单位体积、每秒产生多少个热 O，即总产生率
+   $Q_{\mathrm{hotO}}(z)$。
+2. 在该高度产生的热 O 落入各能量格的概率，即 $P_k(z)$。
 
-二者相乘得到高度和能量的二维产生率：
+对于能量范围 $[E_k,E_k+\Delta E)$，分箱概率定义为
+
+```math
+P_k(z)=
+\frac{N_k(z)}{N_{\mathrm{tot}}(z)}.
+```
+
+$P_k(z)$ 没有单位，并满足
+
+```math
+\sum_k P_k(z)=1.
+```
+
+当前图的左侧面板画的是 $P_k(z)$，因此左图不除以能量格宽度
+$\Delta E$。
+
+如果需要与能量格宽度无关的连续概率密度，则定义
+
+```math
+p(E_k\mid z)
+\approx
+\frac{P_k(z)}{\Delta E}
+=
+\frac{N_k(z)}
+{N_{\mathrm{tot}}(z)\Delta E}.
+```
+
+$p(E\mid z)$ 的单位是 $\mathrm{eV^{-1}}$，并满足
+
+```math
+\sum_k p(E_k\mid z)\Delta E=1.
+```
+
+谱产生率由总产生率与概率密度相乘得到：
 
 ```math
 Q(E,z)=Q_{\mathrm{hotO}}(z)\,p(E\mid z).
@@ -93,7 +127,9 @@ Q_{\mathrm{hotO}}(z)=
 7. 把两个 O 的速度转换回 LAB 系。
 8. 记录 LAB 系中每个 O 的动能。
 
-重复次数足够多以后，将动能放入能量直方图并归一化，就得到 $p(E\mid z)$。
+重复次数足够多以后，将动能放入能量直方图。每个能量格的计数除以总计数，
+得到左图使用的分箱概率 $P_k(z)$。再除以能量格宽度 $\Delta E$，才得到
+概率密度 $p(E\mid z)$。
 
 Monte Carlo 不是为了计算总产生率。总产生率由密度和反应系数直接计算。Monte Carlo 的作用是把反应分支、热速度、振动态和随机方向共同转换成 LAB 系能量概率分布。
 
@@ -313,28 +349,104 @@ E_{\mathrm O,LAB}
 
 ## 8. 如何得到高度和能量二维图
 
-对每个高度分别生成大量事件，然后执行以下归一化：
+对每个高度分别生成大量事件。设 $N_k(z)$ 是落入第 $k$ 个能量格的热 O
+样本数，$N_{\mathrm{tot}}(z)$ 是该高度的总样本数，当前能量格宽度为
+
+```math
+\Delta E=0.025\ \mathrm{eV}.
+```
+
+### 8.1 左图：每个能量格的概率
+
+左图直接使用
+
+```math
+P_k(z)=
+\frac{N_k(z)}
+{N_{\mathrm{tot}}(z)}.
+```
+
+它表示一个新产生的热 O 落入第 $k$ 个 0.025 eV 能量格的概率。该量没有
+单位，并且在每个高度满足
+
+```math
+\sum_k P_k(z)=1.
+```
+
+因此左图不除以 $\Delta E$。其 colorbar 标注为
+`Probability per 0.025 eV bin`。
+
+### 8.2 概率密度
+
+如果要表示单位能量上的概率密度，则需要计算
 
 ```math
 p(E_k\mid z)
 \approx
+\frac{P_k(z)}{\Delta E}
+=
 \frac{N_k(z)}
-{N_{\mathrm{tot}}(z)\Delta E},
+{N_{\mathrm{tot}}(z)\Delta E}.
 ```
 
-其中 $N_k$ 是落入第 $k$ 个能量区间的样本数。
-
-再计算
+分母中的 $\Delta E$ 不是额外的物理权重。它只是把“一个能量格中的概率”
+转换为“单位能量上的概率密度”。概率密度的单位是
+$\mathrm{eV^{-1}}$，其归一化条件为
 
 ```math
-Q(E_k,z)=Q_{\mathrm{hotO}}(z)p(E_k\mid z).
+\sum_k p(E_k\mid z)\Delta E=1.
 ```
 
-绘图时：
+如果改变能量格宽度，$P_k$ 会随格宽改变，而充分收敛的 $p(E\mid z)$
+应近似保持不变。
+
+### 8.3 右图：单位能量的谱产生率
+
+右图画的是单位能量的谱产生率：
+
+```math
+Q(E_k,z)
+=
+Q_{\mathrm{hotO}}(z)p(E_k\mid z)
+=
+Q_{\mathrm{hotO}}(z)
+\frac{P_k(z)}{\Delta E}.
+```
+
+其单位为 $\mathrm{cm^{-3}\,s^{-1}\,eV^{-1}}$。右图必须除以
+$\Delta E$，因为 colorbar 明确表示每 eV 的产生率。对能量求和后应恢复
+总产生率：
+
+```math
+\sum_k Q(E_k,z)\Delta E
+=
+Q_{\mathrm{hotO}}(z).
+```
+
+如果右图不除以 $\Delta E$，得到的将是每个能量格的产生率
+
+```math
+Q_k(z)
+=
+Q_{\mathrm{hotO}}(z)P_k(z).
+```
+
+$Q_k(z)$ 的单位是 $\mathrm{cm^{-3}\,s^{-1}}$ per 0.025 eV bin，并满足
+
+```math
+\sum_k Q_k(z)=Q_{\mathrm{hotO}}(z).
+```
+
+它不能再标注为 $\mathrm{cm^{-3}\,s^{-1}\,eV^{-1}}$。为了与文献中的
+高度和能量谱产生率图以及当前右图的单位保持一致，MarsHotO 的右图使用
+$Q(E,z)$，而不是 $Q_k(z)$。
+
+图中：
 
 * 横坐标是初生 O 的 LAB 能量。
 * 纵坐标是产生高度。
-* 颜色是 $\log_{10}Q(E,z)$。
+* 左图颜色是分箱概率 $P_k(z)$。
+* 右图颜色是 $\log_{10}Q(E,z)$。
 * 图像插值只用于让色块显示平滑，不会增加新的物理信息。
 
 ![热 O 初生能量图](../../examples/figures/mgitm_ls000_f070_hot_o_nascent_energy_with_vibration_energy_maps.png)
@@ -354,8 +466,10 @@ Rahmati 和 Lillis 所用源模型的核心思想相同：
 
 ```text
 Q_hotO(z)      每单位体积、每秒产生多少个热 O
-p(E|z)         新产生的热 O 能量概率密度
-Q(E,z)         新产生热 O 的高度和能量谱
+P_k(z)         新产生的热 O 落入第 k 个能量格的概率，无量纲
+p(E|z)         新产生的热 O 能量概率密度，单位为 eV^-1
+Q_k(z)         第 k 个能量格内的产生率，单位为 cm^-3 s^-1 per bin
+Q(E,z)         单位能量的谱产生率，单位为 cm^-3 s^-1 eV^-1
 n(E,z)         经过运动和碰撞后，实际存在的热 O 高度和能量分布
 ```
 

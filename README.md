@@ -117,8 +117,16 @@ Plots the four discrete hot O source energies without thermal broadening. The le
 
 Calculates and plots:
 
-1. The conditional nascent energy probability in each energy bin
-2. The altitude and energy dependent spectral production rate
+1. The dimensionless conditional probability in each 0.025 eV energy bin,
+   $P_k(z)=N_k(z)/N_{\mathrm{tot}}(z)$
+2. The altitude and energy dependent spectral production rate,
+   $Q(E_k,z)=Q_{\mathrm{hotO}}(z)P_k(z)/\Delta E$, in
+   cm$^{-3}$ s$^{-1}$ eV$^{-1}$
+
+The left panel does not divide by the energy-bin width. The right panel divides
+by $\Delta E$ because it reports production per unit energy. Consequently,
+$\sum_k P_k(z)=1$ and
+$\sum_k Q(E_k,z)\Delta E=Q_{\mathrm{hotO}}(z)$.
 
 The calculation currently includes:
 
