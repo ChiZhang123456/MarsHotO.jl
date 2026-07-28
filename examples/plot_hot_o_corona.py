@@ -1,4 +1,4 @@
-"""Plot the MarsHotO Monte Carlo altitude-energy density distribution."""
+"""Plot the MarsHotO density in each altitude and energy bin."""
 
 from pathlib import Path
 
@@ -58,7 +58,7 @@ def main() -> None:
     )
     colorbar = figure.colorbar(image, ax=axis, pad=0.03)
     colorbar.set_label(
-        r"$\log_{10}\,[n(E,z)\;(\mathrm{cm^{-3}\,eV^{-1}})]$"
+        r"$\log_{10}\,[n_k(z)\;(\mathrm{m^{-3}})]$"
     )
     OUTPUT.parent.mkdir(parents=True, exist_ok=True)
     figure.savefig(OUTPUT, dpi=400, bbox_inches="tight")

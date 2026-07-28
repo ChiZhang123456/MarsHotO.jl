@@ -27,11 +27,16 @@ struct CollisionTarget
     sigma_3eV_m2::Float64
 end
 
-"""One weighted hot O test particle propagated in the stationary Mars frame."""
+"""
+One weighted hot O test particle propagated in the stationary Mars frame.
+
+`weight_s1` is the physical hot O production rate represented by this
+macroparticle, in s^-1.
+"""
 mutable struct HotOParticle
     position_m::NTuple{3,Float64}
     velocity_m_s::NTuple{3,Float64}
-    weight::Float64
+    weight_s1::Float64
     alive::Bool
     collisions::Int
 end

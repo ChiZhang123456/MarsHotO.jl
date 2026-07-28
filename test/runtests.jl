@@ -182,9 +182,10 @@ end
     ))
     rng = Xoshiro(20260727)
     source = sample_hot_o_source(
-        rng, (MARS_RADIUS_M + 200e3, 0.0, 0.0), 1500.0, 300.0, branches,
+        rng, (MARS_RADIUS_M + 200e3, 0.0, 0.0), 1500.0, 300.0, branches;
+        weight_s1=2.5e20,
     )
-    @test source.weight == 1.0
+    @test source.weight_s1 == 2.5e20
     @test sum(abs2, source.velocity_m_s) > 0
     result = transport_particle!(
         rng, source, profile, targets; max_steps=10, step_m=100.0,
@@ -194,23 +195,58 @@ end
 
     @test rahmati_step_length(5_000.0) == 500.0
     @test rahmati_step_length(10_000.0) == 1000.0
+    corona_config = RahmatiMonteCarloConfig(
+        particles_per_source_altitude=10,
+        source_altitudes_km=[150.0, 160.0],
+        seed=73,
+        maximum_altitude_m=260e3,
+        maximum_steps_per_particle=10_000,
+        maximum_total_particles=10_000,
+        altitude_edges_km=collect(100.0:10.0:260.0),
+        energy_edges_eV=collect(range(0.01, 7.0; length=29)),
+    )
     corona = run_hot_o_corona(
         profile, targets, branches;
         chemistry_path=joinpath(
             ROOT, "data", "chemistry",
             "o2plus_dissociative_recombination.toml",
         ),
-        config=RahmatiMonteCarloConfig(
-            primary_particles=20,
-            seed=73,
-            maximum_altitude_m=260e3,
-            maximum_steps_per_particle=10_000,
-            maximum_total_particles=10_000,
-            altitude_edges_km=collect(100.0:10.0:260.0),
-            energy_edges_eV=collect(range(0.01, 7.0; length=29)),
-        ),
+        config=corona_config,
     )
     @test corona.primary_particles == 20
-    @test all(corona.density_cm3_eV1 .>= 0)
-    @test sum(corona.density_cm3_eV1) > 0
+    @test corona.particles_per_source_altitude == 10
+    @test corona.source_altitudes_km == [150.0, 160.0]
+    @test all(corona.source_particle_weights_s1 .> 0)
+    @test sum(corona.source_particle_weights_s1) * 10 ≈
+          corona.total_source_rate_s1
+    @test all(corona.density_m3_per_bin .>= 0)
+    @test sum(corona.density_m3_per_bin) > 0
+
+    source_altitudes_m = 1000 .* corona.source_altitudes_km
+    source_edges_m = MarsHotO._shell_edges_m(source_altitudes_m)
+    source_shell_volume_m3 = (4pi / 3) .* (
+        (MARS_RADIUS_M .+ source_edges_m[2:end]).^3 .-
+        (MARS_RADIUS_M .+ source_edges_m[1:end-1]).^3
+    )
+    for i in eachindex(source_altitudes_m)
+        state = interpolate_profile(profile, source_altitudes_m[i])
+        expected_weight_s1 = hot_o_production_rate(
+            state.density_m3[:e], state.density_m3[:O2p], state.Te_K,
+        ) * source_shell_volume_m3[i] /
+            corona.particles_per_source_altitude
+        @test corona.source_particle_weights_s1[i] ≈ expected_weight_s1
+    end
+
+    corona_repeat = run_hot_o_corona(
+        profile, targets, branches;
+        chemistry_path=joinpath(
+            ROOT, "data", "chemistry",
+            "o2plus_dissociative_recombination.toml",
+        ),
+        config=corona_config,
+    )
+    @test corona_repeat.source_particle_weights_s1 ==
+          corona.source_particle_weights_s1
+    @test corona_repeat.density_m3_per_bin == corona.density_m3_per_bin
+    @test corona_repeat.stop_counts == corona.stop_counts
 end

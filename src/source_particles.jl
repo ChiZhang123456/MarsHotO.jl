@@ -98,7 +98,10 @@ direction are sampled explicitly.
 """
 function sample_hot_o_source(rng, position_m, Te_K, Ti_K, branches;
                              vibrational_probability=[1.0],
-                             vibrational_quantum_eV=0.23)
+                             vibrational_quantum_eV=0.23,
+                             weight_s1=1.0)
+    weight_s1 >= 0 ||
+        throw(DomainError(weight_s1, "Particle weight must be nonnegative"))
     # Both reactants use normalized Maxwellians with zero bulk velocity.
     ve = sample_maxwellian_velocity(rng, Te_K, ELECTRON_MASS_KG)
     vi = sample_maxwellian_velocity(rng, Ti_K, O2P_MASS_KG)
@@ -114,5 +117,11 @@ function sample_hot_o_source(rng, position_m, Te_K, Ti_K, branches;
                    vibrational_level * vibrational_quantum_eV
     product_speed = sqrt(available_eV * EV_J / O_MASS_KG)
     direction = _sample_isotropic_direction(rng)
-    HotOParticle(position_m, _add(vcom, _scale(product_speed, direction)), 1.0, true, 0)
+    HotOParticle(
+        position_m,
+        _add(vcom, _scale(product_speed, direction)),
+        Float64(weight_s1),
+        true,
+        0,
+    )
 end

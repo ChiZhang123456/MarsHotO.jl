@@ -93,13 +93,26 @@ julia --project=. examples/run_hot_o_corona.jl 10000
 python examples/plot_hot_o_corona.py
 ```
 
-The particle count is configurable. A production calculation can use
-approximately `10000000` primary particles, but should be run on an HPC
-system. The packaged MGITM profile ends near 250 km, so the current example
-uses a decreasing log-linear density extrapolation above the model top.
-The nearest-subsolar column is extended spherically, so its absolute global
-source rate is a model approximation rather than a full three-dimensional
-MGITM result.
+The first argument is the number of source particles launched at every source
+altitude. The default source grid is 100 to 250 km with 1 km spacing, so
+`10000` creates 1.51 million primary particles. At source altitude $z_i$, each
+particle carries the production-rate weight
+
+```math
+w_i=\frac{Q_{\mathrm{hotO}}(z_i)V_i}{N_i}
+\quad \mathrm{s^{-1}},
+```
+
+where $V_i$ is the spherical-shell volume and $N_i$ is the number of source
+particles at that altitude. Residence time is accumulated as
+$w_i\Delta t$ and divided by the diagnostic shell volume. The output is hot O
+density in m$^{-3}$ per energy bin, without division by the energy-bin width.
+Secondary O atoms inherit the parent particle weight.
+
+The packaged MGITM profile ends near 250 km. Neutral densities above the model
+top use a decreasing log-linear extrapolation during transport. The nearest
+subsolar column is extended spherically, so its absolute global source rate is
+a model approximation rather than a full three-dimensional MGITM result.
 
 ### `plot_mgitm_hot_o_profiles.py`
 

@@ -1,19 +1,18 @@
 """
 Weighted particle ensembles and residence-time diagnostics.
 
-This file builds the global source distribution, tracks primary and secondary
-particles, records termination reasons, and converts residence time into the
-spherical density spectrum n(E,z) in cm^-3 eV^-1.
+This file builds a stratified source distribution, tracks primary and
+secondary particles, records termination reasons, and converts residence time
+into the spherical density in each altitude and energy bin, in m^-3.
 """
 Base.@kwdef struct RahmatiMonteCarloConfig
-    primary_particles::Int = 10_000
+    particles_per_source_altitude::Int = 10_000
     seed::Int = 20260727
     minimum_energy_eV::Float64 = 0.01
     maximum_altitude_m::Float64 = 110_000e3
     maximum_steps_per_particle::Int = 2_000_000
     maximum_total_particles::Int = 50_000_000
-    source_minimum_altitude_m::Float64 = 150e3
-    source_maximum_altitude_m::Float64 = 500e3
+    source_altitudes_km::Vector{Float64} = collect(100.0:1.0:250.0)
     altitude_edges_km::Vector{Float64} = collect(100.0:5.0:1000.0)
     energy_edges_eV::Vector{Float64} = collect(range(0.01, 7.0; length=141))
 end
@@ -21,7 +20,10 @@ end
 struct HotOCoronaResult
     altitude_edges_km::Vector{Float64}
     energy_edges_eV::Vector{Float64}
-    density_cm3_eV1::Matrix{Float64}
+    density_m3_per_bin::Matrix{Float64}
+    source_altitudes_km::Vector{Float64}
+    source_particle_weights_s1::Vector{Float64}
+    particles_per_source_altitude::Int
     primary_particles::Int
     secondary_particles::Int
     total_source_rate_s1::Float64
@@ -41,10 +43,6 @@ function _shell_edges_m(altitude_m)
     edges
 end
 
-function _sample_weighted_index(rng, cumulative_weight)
-    searchsortedfirst(cumulative_weight, rand(rng) * cumulative_weight[end])
-end
-
 function _load_vibration(path)
     input = TOML.parsefile(path)["vibration"]
     probability = Float64.(input["fraction"])
@@ -53,14 +51,14 @@ function _load_vibration(path)
 end
 
 function _accumulate_residence!(
-    residence_s, particle_rate_s1, dt, altitude_m, energy_eV,
+    residence_particles, particle_weight_s1, dt, altitude_m, energy_eV,
     altitude_edges_km, energy_edges_eV,
 )
     ia = searchsortedlast(altitude_edges_km, altitude_m / 1000)
     ie = searchsortedlast(energy_edges_eV, energy_eV)
     if 1 <= ia < length(altitude_edges_km) &&
        1 <= ie < length(energy_edges_eV)
-        residence_s[ia, ie] += particle_rate_s1 * dt
+        residence_particles[ia, ie] += particle_weight_s1 * dt
     end
 end
 
@@ -82,58 +80,78 @@ function _advance_gravity(position, velocity, ds)
 end
 
 """
-Run the spherical-column Rahmati Monte Carlo model.
+Run the spherically extended Rahmati Monte Carlo model.
 
-The nearest-subsolar MGITM profile is extended spherically. Source particles
-are sampled in proportion to Q_hotO(z) times shell volume. The returned
-height-energy density uses a residence-time estimator.
+The nearest-subsolar MGITM profile is extended spherically. The model launches
+the configured number of particles at every source altitude. A source particle
+at altitude i represents Q_hotO(z_i) * V_shell,i / N_i physical O atoms per
+second. The returned height-energy density uses a residence-time estimator and
+is reported in m^-3 per energy bin.
 """
 function run_hot_o_corona(
     atmosphere::AtmosphereProfile, targets, branches;
     chemistry_path::AbstractString,
     config::RahmatiMonteCarloConfig=RahmatiMonteCarloConfig(),
 )
-    config.primary_particles > 0 || error("primary_particles must be positive")
+    config.particles_per_source_altitude > 0 ||
+        error("particles_per_source_altitude must be positive")
+    length(config.source_altitudes_km) >= 2 ||
+        error("At least two source altitudes are required")
+    issorted(config.source_altitudes_km) ||
+        error("source_altitudes_km must be sorted")
+    all(diff(config.source_altitudes_km) .> 0) ||
+        error("source_altitudes_km must be strictly increasing")
     rng = Xoshiro(config.seed)
-    source_edges_m = _shell_edges_m(atmosphere.altitude_m)
+    source_altitudes_m = 1000 .* config.source_altitudes_km
+    all(source_altitudes_m .> atmosphere.altitude_m[1]) ||
+        error("Source altitudes must be above the atmospheric lower boundary")
+    all(source_altitudes_m .< config.maximum_altitude_m) ||
+        error("Source altitudes must be below maximum_altitude_m")
+    source_edges_m = _shell_edges_m(source_altitudes_m)
     shell_volume_m3 = (4pi / 3) .* (
         (MARS_RADIUS_M .+ source_edges_m[2:end]).^3 .-
         (MARS_RADIUS_M .+ source_edges_m[1:end-1]).^3
     )
+    source_states = [
+        interpolate_profile(atmosphere, altitude_m)
+        for altitude_m in source_altitudes_m
+    ]
     source_q_m3_s1 = [
         hot_o_production_rate(
-            atmosphere.density_m3[:e][i],
-            atmosphere.density_m3[:O2p][i],
-            atmosphere.Te_K[i],
-        ) for i in eachindex(atmosphere.altitude_m)
+            state.density_m3[:e],
+            state.density_m3[:O2p],
+            state.Te_K,
+        ) for state in source_states
     ]
-    source_weight = source_q_m3_s1 .* shell_volume_m3
-    source_weight .*= (
-        (atmosphere.altitude_m .>= config.source_minimum_altitude_m) .&
-        (atmosphere.altitude_m .<= config.source_maximum_altitude_m)
-    )
-    cumulative_source = cumsum(source_weight)
-    total_source_rate_s1 = cumulative_source[end]
+    source_rate_s1 = source_q_m3_s1 .* shell_volume_m3
+    source_particle_weights_s1 =
+        source_rate_s1 ./ config.particles_per_source_altitude
+    total_source_rate_s1 = sum(source_rate_s1)
     total_source_rate_s1 > 0 || error("The atmosphere has zero hot O source")
-    macro_rate_s1 = total_source_rate_s1 / config.primary_particles
+    primary_particles =
+        length(source_altitudes_m) * config.particles_per_source_altitude
+    primary_particles <= config.maximum_total_particles ||
+        error("Primary particles exceed maximum_total_particles")
     vibration_probability, vibration_quantum_eV =
         _load_vibration(chemistry_path)
 
     queue = HotOParticle[]
-    sizehint!(queue, min(config.primary_particles, 1_000_000))
-    for _ in 1:config.primary_particles
-        iz = _sample_weighted_index(rng, cumulative_source)
-        zlo, zhi = source_edges_m[iz], source_edges_m[iz + 1]
-        altitude_m = zlo + rand(rng) * (zhi - zlo)
+    sizehint!(queue, min(primary_particles, 1_000_000))
+    for iz in eachindex(source_altitudes_m)
+        altitude_m = source_altitudes_m[iz]
         position = (MARS_RADIUS_M + altitude_m, 0.0, 0.0)
-        push!(queue, sample_hot_o_source(
-            rng, position, atmosphere.Te_K[iz], atmosphere.Ti_K[iz], branches;
-            vibrational_probability=vibration_probability,
-            vibrational_quantum_eV=vibration_quantum_eV,
-        ))
+        state = source_states[iz]
+        for _ in 1:config.particles_per_source_altitude
+            push!(queue, sample_hot_o_source(
+                rng, position, state.Te_K, state.Ti_K, branches;
+                vibrational_probability=vibration_probability,
+                vibrational_quantum_eV=vibration_quantum_eV,
+                weight_s1=source_particle_weights_s1[iz],
+            ))
+        end
     end
 
-    residence = zeros(
+    residence_particles = zeros(
         length(config.altitude_edges_km) - 1,
         length(config.energy_edges_eV) - 1,
     )
@@ -151,7 +169,7 @@ function run_hot_o_corona(
                 reason = :thermalized
                 break
             elseif altitude_m >= config.maximum_altitude_m
-                reason = :upper_boundary
+                reason = :escaped
                 break
             elseif altitude_m <= atmosphere.altitude_m[1]
                 reason = :lower_boundary
@@ -167,7 +185,8 @@ function run_hot_o_corona(
             position1, velocity1, dt =
                 _advance_gravity(particle.position_m, particle.velocity_m_s, ds)
             _accumulate_residence!(
-                residence, macro_rate_s1, dt, altitude_m, energy_eV,
+                residence_particles, particle.weight_s1, dt,
+                altitude_m, energy_eV,
                 config.altitude_edges_km, config.energy_edges_eV,
             )
             particle.position_m = position1
@@ -193,7 +212,7 @@ function run_hot_o_corona(
                     end
                     push!(queue, HotOParticle(
                         particle.position_m, target_after,
-                        particle.weight, true, 0,
+                        particle.weight_s1, true, 0,
                     ))
                     secondary_count += 1
                 end
@@ -208,13 +227,15 @@ function run_hot_o_corona(
     diagnostic_volume_m3 = (4pi / 3) .* (
         altitude_radius_m[2:end].^3 .- altitude_radius_m[1:end-1].^3
     )
-    energy_width_eV = diff(config.energy_edges_eV)
-    density_m3_eV1 = residence ./
-        (diagnostic_volume_m3 .* transpose(energy_width_eV))
+    density_m3_per_bin =
+        residence_particles ./ reshape(diagnostic_volume_m3, :, 1)
     HotOCoronaResult(
         copy(config.altitude_edges_km), copy(config.energy_edges_eV),
-        density_m3_eV1 .* 1e-6,
-        config.primary_particles, secondary_count,
+        density_m3_per_bin,
+        copy(config.source_altitudes_km),
+        source_particle_weights_s1,
+        config.particles_per_source_altitude,
+        primary_particles, secondary_count,
         total_source_rate_s1, stops,
     )
 end
@@ -222,15 +243,15 @@ end
 """Write a compact long-form text table for Python plotting."""
 function write_corona_distribution(path::AbstractString, result::HotOCoronaResult)
     open(path, "w") do io
-        println(io, "# altitude_km energy_eV density_cm-3_eV-1")
-        for ia in axes(result.density_cm3_eV1, 1)
+        println(io, "# altitude_km energy_eV density_m-3_per_bin")
+        for ia in axes(result.density_m3_per_bin, 1)
             altitude = (result.altitude_edges_km[ia] +
                         result.altitude_edges_km[ia + 1]) / 2
-            for ie in axes(result.density_cm3_eV1, 2)
+            for ie in axes(result.density_m3_per_bin, 2)
                 energy = (result.energy_edges_eV[ie] +
                           result.energy_edges_eV[ie + 1]) / 2
                 println(io, altitude, ' ', energy, ' ',
-                        result.density_cm3_eV1[ia, ie])
+                        result.density_m3_per_bin[ia, ie])
             end
         end
     end
