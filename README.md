@@ -280,10 +280,6 @@ julia --project=. -e "using Pkg; Pkg.test()"
 
 ![Hot O energy maps](examples/figures/mgitm_ls000_f070_hot_o_nascent_energy_with_vibration_energy_maps.png)
 
-### Monte Carlo hot O altitude-energy distribution
-
-![Monte Carlo hot O altitude-energy distribution](examples/figures/hot_o_altitude_energy_distribution.png)
-
 ### Two opposite hot O collision trajectories
 
 ![Two opposite hot O collision trajectories](examples/figures/two_opposite_hot_o_collision_trajectories.png)
