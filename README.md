@@ -1,6 +1,6 @@
 # MarsHotO.jl
 
-Mars Hot Oxygen Transport model, abbreviated MHOT, is a Julia Monte Carlo simulation package for the production, collisional transport, corona formation, and photochemical escape of hot atomic oxygen at Mars.
+Mars Hot Oxygen Transport model, abbreviated MHOT, is a Julia package for the production, collisional transport, corona formation, and photochemical escape of hot atomic oxygen at Mars. It includes both the Rahmati Monte Carlo particle model and the Rahmati one-dimensional two-stream transport model.
 
 The current repository contains the Python prototype used to:
 
@@ -16,7 +16,9 @@ The Julia core reads MGITM atmospheres, samples O2+ dissociative recombination s
 ## Package layout
 
 ```text
-src/                  Julia simulation source
+src/shared/           Atmosphere, chemistry, cross sections, and kinematics
+src/monte_carlo/      Monte Carlo particle transport
+src/two_fluid/        Rahmati two-stream transport
 data/chemistry/       O2+ dissociative recombination settings
 data/cross_sections/  Hot O collision settings
 data/atmosphere/      Atmosphere data notes
@@ -31,12 +33,22 @@ MarsHotO samples from the inverse-CDF lookup table used by MarsASPEN. The source
 
 物理模型的中文逐步说明见：
 
-* [MarsHotO 物理模型总览](docs/HOT_O_COLLISION_MODEL_ZH.md)
-* [热 O 与中性大气的碰撞截面](docs/HOT_O_CROSS_SECTIONS_ZH.md)
-* [热 O 高度和初生能量分布](docs/HOT_O_SOURCE_MODEL_ZH.md)
-* [LAB、COM、散射角和碰撞能量损失](docs/HOT_O_SCATTERING_TWO_BODY_ZH.md)
+* [MarsHotO Monte Carlo 物理模型总览](docs/monte_carlo/HOT_O_COLLISION_MODEL_ZH.md)
+* [热 O 与中性大气的碰撞截面](docs/monte_carlo/HOT_O_CROSS_SECTIONS_ZH.md)
+* [热 O 高度和初生能量分布](docs/monte_carlo/HOT_O_SOURCE_MODEL_ZH.md)
+* [LAB、COM、散射角和碰撞能量损失](docs/monte_carlo/HOT_O_SCATTERING_TWO_BODY_ZH.md)
+* [热 O 双流输运模型](docs/two_fluid/HOT_O_TWO_STREAM_MODEL_ZH.md)
 
 ## Current physics
+
+The Julia package provides two transport solvers:
+
+1. `run_hot_o_corona`, the three-dimensional Monte Carlo particle solver
+2. `run_two_stream`, the one-dimensional upward and downward flux solver
+
+The equations, units, collision redistribution, and boundary conditions of
+the second solver are documented in
+[HOT_O_TWO_STREAM_MODEL_ZH.md](docs/two_fluid/HOT_O_TWO_STREAM_MODEL_ZH.md).
 
 The total hot O production rate is
 
@@ -74,8 +86,8 @@ Run the Julia transport model and then plot the residence-time altitude-energy
 density:
 
 ```bash
-julia --project=. examples/run_hot_o_corona.jl 10000
-python examples/plot_hot_o_corona.py
+julia --project=. examples/monte_carlo/run_hot_o_corona.jl 10000
+python examples/monte_carlo/plot_hot_o_corona.py
 ```
 
 The particle count is configurable. A production calculation can use
@@ -85,6 +97,19 @@ uses a decreasing log-linear density extrapolation above the model top.
 The nearest-subsolar column is extended spherically, so its absolute global
 source rate is a model approximation rather than a full three-dimensional
 MGITM result.
+
+### Rahmati two-stream example
+
+Run the one-dimensional upward and downward flux solver with:
+
+```bash
+julia --project=. examples/two_fluid/run_two_stream.jl
+```
+
+The solver uses a 1 km altitude grid from 100 to 300 km, constructs a
+collision redistribution matrix from the full LAB scattering-angle table,
+includes cascade and recoil-O secondary production, and writes
+`examples/output/hot_o_two_stream_flux.csv`.
 
 ### `plot_mgitm_hot_o_profiles.py`
 

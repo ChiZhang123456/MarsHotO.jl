@@ -226,7 +226,7 @@ Q(E_k,z)=Q_{\mathrm{hotO}}(z)p(E_k\mid z).
 * 颜色是 $\log_{10}Q(E,z)$。
 * 图像插值只用于让色块显示平滑，不会增加新的物理信息。
 
-![热 O 初生能量图](../examples/figures/mgitm_ls000_f070_hot_o_nascent_energy_with_vibration_energy_maps.png)
+![热 O 初生能量图](../../examples/figures/mgitm_ls000_f070_hot_o_nascent_energy_with_vibration_energy_maps.png)
 
 ## 9. 与 Rahmati 和 Lillis 模型的关系
 

@@ -1,5 +1,5 @@
 const DEFAULT_SCATTERING_ANGLE_PATH = normpath(joinpath(
-    @__DIR__, "..", "data", "cross_sections",
+    @__DIR__, "..", "..", "data", "cross_sections",
     "scattering_angle_distribution.txt",
 ))
 const _DEFAULT_SCATTERING_ANGLE_DISTRIBUTION =

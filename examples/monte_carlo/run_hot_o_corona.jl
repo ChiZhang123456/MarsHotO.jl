@@ -1,6 +1,6 @@
 using MarsHotO
 
-const ROOT = normpath(joinpath(@__DIR__, ".."))
+const ROOT = normpath(joinpath(@__DIR__, "..", ".."))
 const PARTICLES = length(ARGS) >= 1 ? parse(Int, ARGS[1]) : 10_000
 const SEED = length(ARGS) >= 2 ? parse(Int, ARGS[2]) : 20260727
 
@@ -29,7 +29,7 @@ result = run_hot_o_corona(
     config=config,
 )
 
-output_dir = joinpath(@__DIR__, "output")
+output_dir = joinpath(ROOT, "examples", "output")
 mkpath(output_dir)
 output_path = joinpath(output_dir, "hot_o_altitude_energy_distribution.dat")
 write_corona_distribution(output_path, result)
