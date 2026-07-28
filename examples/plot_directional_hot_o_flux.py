@@ -17,6 +17,7 @@ DEFAULT_RUN_DIRECTORY = (
     ROOT / "examples" / "output" / "run_1p51m_crossings"
 )
 MARS_RADIUS_M = 3389.5e3
+MARS_MU_M3_S2 = 4.282837e13
 EV_J = 1.602176634e-19
 AMU_KG = 1.66053906892e-27
 O_MASS_KG = 15.999 * AMU_KG
@@ -520,6 +521,171 @@ def main() -> None:
     )
     plt.close(spectrum_figure)
 
+    altitude_300_index = int(np.argmin(np.abs(altitude_km - 300.0)))
+    if not np.isclose(altitude_km[altitude_300_index], 300.0):
+        raise RuntimeError("The directional grid does not contain 300 km")
+    upward_300 = upward_flux[altitude_300_index]
+    downward_300 = downward_flux[altitude_300_index]
+    upward_300_error = upward_standard_error[altitude_300_index]
+    downward_300_error = downward_standard_error[altitude_300_index]
+    radius_300_m = MARS_RADIUS_M + 300.0e3
+    escape_energy_300_eV = (
+        MARS_MU_M3_S2 * O_MASS_KG / radius_300_m / EV_J
+    )
+    escape_energy_bins = energy_eV >= escape_energy_300_eV
+
+    spectrum_300_figure, spectrum_300_axis = plt.subplots(
+        figsize=(5.2, 4.0), constrained_layout=True,
+    )
+    upward_300_valid = upward_300 > 0
+    downward_300_valid = downward_300 > 0
+    spectrum_300_axis.plot(
+        energy_eV[upward_300_valid],
+        upward_300[upward_300_valid],
+        color="#2166ac",
+        linewidth=1.5,
+        label="Upward",
+    )
+    upward_300_error_valid = (
+        upward_300_valid & (upward_300_error < 0.8 * upward_300)
+    )
+    spectrum_300_axis.fill_between(
+        energy_eV[upward_300_error_valid],
+        upward_300[upward_300_error_valid]
+        - upward_300_error[upward_300_error_valid],
+        upward_300[upward_300_error_valid]
+        + upward_300_error[upward_300_error_valid],
+        color="#2166ac",
+        alpha=0.20,
+        linewidth=0,
+    )
+    spectrum_300_axis.plot(
+        energy_eV[downward_300_valid],
+        downward_300[downward_300_valid],
+        color="#d95f02",
+        linewidth=1.5,
+        label="Downward",
+    )
+    downward_300_error_valid = (
+        downward_300_valid
+        & (downward_300_error < 0.8 * downward_300)
+    )
+    spectrum_300_axis.fill_between(
+        energy_eV[downward_300_error_valid],
+        downward_300[downward_300_error_valid]
+        - downward_300_error[downward_300_error_valid],
+        downward_300[downward_300_error_valid]
+        + downward_300_error[downward_300_error_valid],
+        color="#d95f02",
+        alpha=0.20,
+        linewidth=0,
+    )
+    spectrum_300_axis.axvline(
+        escape_energy_300_eV,
+        color="0.25",
+        linestyle="--",
+        linewidth=1.0,
+        label=rf"$E_{{esc}}={escape_energy_300_eV:.2f}$ eV",
+    )
+    spectrum_300_axis.set(
+        yscale="log",
+        xlabel="Hot O energy (eV)",
+        ylabel=r"Flux (cm$^{-2}$ s$^{-1}$ per bin)",
+        title="Directional hot O energy spectra at 300 km",
+        xlim=(energy_eV[0], energy_eV[-1]),
+    )
+    positive_300_spectrum = np.concatenate(
+        [
+            upward_300[upward_300_valid],
+            downward_300[downward_300_valid],
+        ]
+    )
+    spectrum_300_axis.set_ylim(
+        positive_300_spectrum.min() / 2,
+        positive_300_spectrum.max() * 2,
+    )
+    spectrum_300_axis.grid(True, color="0.88", linewidth=0.6)
+    spectrum_300_axis.legend(frameon=False)
+    spectrum_300_figure.savefig(
+        run_directory / "upward_downward_hot_o_flux_spectrum_300km.png",
+        dpi=400,
+        bbox_inches="tight",
+    )
+    plt.close(spectrum_300_figure)
+
+    upward_300_batch_total = np.sum(
+        upward_stack[:, altitude_300_index, :], axis=1
+    )
+    downward_300_batch_total = np.sum(
+        downward_stack[:, altitude_300_index, :], axis=1
+    )
+    upward_300_batch_escape = np.sum(
+        upward_stack[:, altitude_300_index, escape_energy_bins], axis=1
+    )
+    upward_300_total = float(np.mean(upward_300_batch_total))
+    downward_300_total = float(np.mean(downward_300_batch_total))
+    upward_300_escape = float(np.mean(upward_300_batch_escape))
+    upward_300_total_error = float(
+        np.std(upward_300_batch_total, ddof=1) / np.sqrt(len(paths))
+    )
+    downward_300_total_error = float(
+        np.std(downward_300_batch_total, ddof=1) / np.sqrt(len(paths))
+    )
+    upward_300_escape_error = float(
+        np.std(upward_300_batch_escape, ddof=1) / np.sqrt(len(paths))
+    )
+    projected_area_300_cm2 = np.pi * (radius_300_m * 100.0) ** 2
+    spherical_area_300_cm2 = 4.0 * projected_area_300_cm2
+    escape_summary = {
+        "altitude_km": 300.0,
+        "mars_radius_km": MARS_RADIUS_M / 1000.0,
+        "local_escape_energy_eV": escape_energy_300_eV,
+        "energy_bin_selection": (
+            "Energy-bin centers greater than or equal to local escape energy"
+        ),
+        "upward_flux_all_energy_cm2_s1": upward_300_total,
+        "upward_flux_all_energy_standard_error_cm2_s1": (
+            upward_300_total_error
+        ),
+        "downward_flux_all_energy_cm2_s1": downward_300_total,
+        "downward_flux_all_energy_standard_error_cm2_s1": (
+            downward_300_total_error
+        ),
+        "upward_escape_capable_flux_cm2_s1": upward_300_escape,
+        "upward_escape_capable_flux_standard_error_cm2_s1": (
+            upward_300_escape_error
+        ),
+        "projected_area_pi_r2_cm2": projected_area_300_cm2,
+        "all_upward_rate_projected_area_s1": (
+            upward_300_total * projected_area_300_cm2
+        ),
+        "all_upward_rate_projected_area_standard_error_s1": (
+            upward_300_total_error * projected_area_300_cm2
+        ),
+        "escape_rate_projected_area_s1": (
+            upward_300_escape * projected_area_300_cm2
+        ),
+        "escape_rate_projected_area_standard_error_s1": (
+            upward_300_escape_error * projected_area_300_cm2
+        ),
+        "spherical_area_4pi_r2_cm2": spherical_area_300_cm2,
+        "all_upward_rate_spherical_area_s1": (
+            upward_300_total * spherical_area_300_cm2
+        ),
+        "all_upward_rate_spherical_area_standard_error_s1": (
+            upward_300_total_error * spherical_area_300_cm2
+        ),
+        "escape_rate_spherical_area_s1": (
+            upward_300_escape * spherical_area_300_cm2
+        ),
+        "escape_rate_spherical_area_standard_error_s1": (
+            upward_300_escape_error * spherical_area_300_cm2
+        ),
+    }
+    (run_directory / "escape_flux_300km.json").write_text(
+        json.dumps(escape_summary, indent=2), encoding="utf-8"
+    )
+
     metadata = {
         "batch_files": len(paths),
         "primary_particles": sum(item["primary"] for item in headers),
@@ -536,6 +702,7 @@ def main() -> None:
         json.dumps(metadata, indent=2), encoding="utf-8"
     )
     print(json.dumps(metadata, indent=2))
+    print(json.dumps(escape_summary, indent=2))
 
 
 if __name__ == "__main__":
