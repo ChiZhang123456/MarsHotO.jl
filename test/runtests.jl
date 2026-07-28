@@ -220,6 +220,11 @@ end
     @test sum(corona.source_particle_weights_s1) * 10 ≈
           corona.total_source_rate_s1
     @test all(corona.density_m3_per_bin .>= 0)
+    @test all(corona.upward_density_m3_per_bin .>= 0)
+    @test all(corona.downward_density_m3_per_bin .>= 0)
+    @test corona.density_m3_per_bin ==
+          corona.upward_density_m3_per_bin .+
+          corona.downward_density_m3_per_bin
     @test sum(corona.density_m3_per_bin) > 0
 
     source_altitudes_m = 1000 .* corona.source_altitudes_km
@@ -248,5 +253,69 @@ end
     @test corona_repeat.source_particle_weights_s1 ==
           corona.source_particle_weights_s1
     @test corona_repeat.density_m3_per_bin == corona.density_m3_per_bin
+    @test corona_repeat.upward_density_m3_per_bin ==
+          corona.upward_density_m3_per_bin
+    @test corona_repeat.downward_density_m3_per_bin ==
+          corona.downward_density_m3_per_bin
     @test corona_repeat.stop_counts == corona.stop_counts
+
+    crossing_path = tempname() * ".bin"
+    crossing_config = HotOCrossingConfig(
+        particles_per_source_altitude=2,
+        source_altitudes_km=[150.0, 160.0],
+        crossing_altitudes_km=collect(100.0:10.0:200.0),
+        domain_minimum_altitude_km=100.0,
+        domain_maximum_altitude_km=200.0,
+        seed=91,
+        maximum_steps_per_particle=10_000,
+        maximum_total_particles=10_000,
+    )
+    crossing_result = run_hot_o_crossing_events(
+        profile, targets, branches;
+        chemistry_path=joinpath(
+            ROOT, "data", "chemistry",
+            "o2plus_dissociative_recombination.toml",
+        ),
+        output_path=crossing_path,
+        config=crossing_config,
+    )
+    @test crossing_result.primary_particles == 4
+    @test crossing_result.event_records > crossing_result.primary_particles
+    @test sizeof(HotOEventRecord) == 88
+    open(crossing_path, "r") do io
+        @test String(read(io, 8)) == "MHOTE001"
+        @test read(io, UInt32) == 1
+        @test read(io, UInt32) == sizeof(HotOEventRecord)
+        event_records = read(io, UInt64)
+        primary_particles = read(io, UInt64)
+        secondary_particles = read(io, UInt64)
+        tracked_particles = read(io, UInt64)
+        @test event_records == crossing_result.event_records
+        @test primary_particles == crossing_result.primary_particles
+        @test secondary_particles == crossing_result.secondary_particles
+        @test tracked_particles ==
+              primary_particles + secondary_particles
+        seek(io, MarsHotO.HOT_O_EVENT_HEADER_BYTES)
+        records = HotOEventRecord[]
+        for _ in 1:Int(event_records)
+            record_ref = Ref{HotOEventRecord}()
+            read!(io, record_ref)
+            push!(records, record_ref[])
+        end
+        births = filter(
+            record -> record.event_code == EVENT_BIRTH,
+            records,
+        )
+        @test length(births) == tracked_particles
+        crossings = filter(
+            record -> record.event_code == EVENT_CROSSING,
+            records,
+        )
+        @test !isempty(crossings)
+        @test all(
+            record -> sign(record.radial_velocity_m_s) ==
+                      record.direction,
+            crossings,
+        )
+    end
 end

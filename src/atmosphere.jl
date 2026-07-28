@@ -69,21 +69,53 @@ function _linear_interp(x::Real, xp, fp)
 end
 
 function _log_density_interp(x::Real, xp, fp)
-    positive = max.(fp, floatmin(Float64))
     if x <= xp[1]
-        return positive[1]
+        return max(fp[1], floatmin(Float64))
     elseif x >= xp[end]
-        slope = (log(positive[end]) - log(positive[end-1])) /
+        value_last = max(fp[end], floatmin(Float64))
+        value_previous = max(fp[end - 1], floatmin(Float64))
+        slope = (log(value_last) - log(value_previous)) /
                 (xp[end] - xp[end-1])
-        return exp(log(positive[end]) + min(slope, 0.0) * (x - xp[end]))
+        return exp(log(value_last) + min(slope, 0.0) * (x - xp[end]))
     end
-    exp(_linear_interp(x, xp, log.(positive)))
+    i = searchsortedlast(xp, x)
+    weight = (x - xp[i]) / (xp[i + 1] - xp[i])
+    log_value_1 = log(max(fp[i], floatmin(Float64)))
+    log_value_2 = log(max(fp[i + 1], floatmin(Float64)))
+    exp(muladd(weight, log_value_2 - log_value_1, log_value_1))
 end
 
 """Interpolate temperatures and densities at altitude in metres."""
 function interpolate_profile(profile::AtmosphereProfile, altitude_m::Real)
-    densities = Dict(k => _log_density_interp(altitude_m, profile.altitude_m, v)
-                     for (k, v) in profile.density_m3)
+    densities = (
+        CO2=_log_density_interp(
+            altitude_m, profile.altitude_m, profile.density_m3[:CO2],
+        ),
+        O=_log_density_interp(
+            altitude_m, profile.altitude_m, profile.density_m3[:O],
+        ),
+        N2=_log_density_interp(
+            altitude_m, profile.altitude_m, profile.density_m3[:N2],
+        ),
+        CO=_log_density_interp(
+            altitude_m, profile.altitude_m, profile.density_m3[:CO],
+        ),
+        O2=_log_density_interp(
+            altitude_m, profile.altitude_m, profile.density_m3[:O2],
+        ),
+        O2p=_log_density_interp(
+            altitude_m, profile.altitude_m, profile.density_m3[:O2p],
+        ),
+        Op=_log_density_interp(
+            altitude_m, profile.altitude_m, profile.density_m3[:Op],
+        ),
+        CO2p=_log_density_interp(
+            altitude_m, profile.altitude_m, profile.density_m3[:CO2p],
+        ),
+        e=_log_density_interp(
+            altitude_m, profile.altitude_m, profile.density_m3[:e],
+        ),
+    )
     return (
         Tn_K=_linear_interp(altitude_m, profile.altitude_m, profile.Tn_K),
         Ti_K=_linear_interp(altitude_m, profile.altitude_m, profile.Ti_K),

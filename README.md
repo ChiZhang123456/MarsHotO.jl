@@ -97,6 +97,42 @@ python examples/plot_two_opposite_hot_o.py
 The detailed trajectory and collision tables are written locally under
 `examples/output/` and are not committed.
 
+### Particle-level altitude-crossing events
+
+Run the Julia model with a 100 to 2000 km computational domain and write a
+fixed-width binary event stream:
+
+```bash
+julia --project=. examples/run_hot_o_crossing_events.jl 500 20260810 \
+  examples/output/run_1p51m_crossings/batch_01.bin
+```
+
+Each event records the particle ID, parent particle ID, macroparticle rate
+weight, event time, altitude, three-dimensional velocity, radial velocity,
+collision count, altitude-surface index, event type, and radial direction.
+Events include particle birth, crossings of 10 km altitude surfaces, and
+terminal states. Particles are out of domain when their altitude is below
+100 km or above 2000 km.
+
+Calculate upward and downward radial flux directly from the crossing events:
+
+```bash
+python examples/plot_directional_hot_o_flux.py \
+  examples/output/run_1p51m_crossings
+```
+
+For crossing surface radius \(r\), energy bin \(k\), and either radial
+direction, the flux is
+
+```math
+\Phi_k(r)=\frac{\sum_p w_p}{4\pi r^2}.
+```
+
+The output unit is cm\(^{-2}\) s\(^{-1}\) per energy bin. It is not obtained
+by multiplying a residence-time density by the total particle speed. Large
+binary event files and derived numerical grids remain local under
+`examples/output/` and are not committed.
+
 ### Complete Rahmati Monte Carlo example
 
 Run the Julia transport model and then plot the residence-time altitude-energy

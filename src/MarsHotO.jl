@@ -23,6 +23,7 @@ include("collision_kinematics.jl")
 include("source_particles.jl")
 include("transport.jl")
 include("ensembles.jl")
+include("crossing_events.jl")
 
 export AtmosphereProfile, CollisionTarget, DRBranch, HotOParticle
 export MARS_RADIUS_M, O_MASS_KG, EV_J
@@ -41,5 +42,11 @@ export sample_maxwellian_velocity
 export sample_hot_o_source, transport_particle!
 export RahmatiMonteCarloConfig, HotOCoronaResult, rahmati_step_length
 export run_hot_o_corona, write_corona_distribution
+export write_directional_corona_distribution
+export HotOCrossingConfig, HotOEventRecord, HotOCrossingRunResult
+export run_hot_o_crossing_events
+export EVENT_BIRTH, EVENT_CROSSING
+export EVENT_EXIT_LOWER, EVENT_EXIT_UPPER, EVENT_THERMALIZED
+export EVENT_MAXIMUM_STEPS, EVENT_MAXIMUM_PARTICLES
 
 end

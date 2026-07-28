@@ -21,6 +21,8 @@ struct HotOCoronaResult
     altitude_edges_km::Vector{Float64}
     energy_edges_eV::Vector{Float64}
     density_m3_per_bin::Matrix{Float64}
+    upward_density_m3_per_bin::Matrix{Float64}
+    downward_density_m3_per_bin::Matrix{Float64}
     source_altitudes_km::Vector{Float64}
     source_particle_weights_s1::Vector{Float64}
     particles_per_source_altitude::Int
@@ -151,7 +153,11 @@ function run_hot_o_corona(
         end
     end
 
-    residence_particles = zeros(
+    upward_residence_particles = zeros(
+        length(config.altitude_edges_km) - 1,
+        length(config.energy_edges_eV) - 1,
+    )
+    downward_residence_particles = zeros(
         length(config.altitude_edges_km) - 1,
         length(config.energy_edges_eV) - 1,
     )
@@ -184,8 +190,14 @@ function run_hot_o_corona(
             ds = rahmati_step_length(mfp)
             position1, velocity1, dt =
                 _advance_gravity(particle.position_m, particle.velocity_m_s, ds)
+            radial_velocity_m_s =
+                _dot(particle.position_m, particle.velocity_m_s) /
+                _norm(particle.position_m)
+            directional_residence_particles =
+                radial_velocity_m_s >= 0 ?
+                upward_residence_particles : downward_residence_particles
             _accumulate_residence!(
-                residence_particles, particle.weight_s1, dt,
+                directional_residence_particles, particle.weight_s1, dt,
                 altitude_m, energy_eV,
                 config.altitude_edges_km, config.energy_edges_eV,
             )
@@ -227,17 +239,63 @@ function run_hot_o_corona(
     diagnostic_volume_m3 = (4pi / 3) .* (
         altitude_radius_m[2:end].^3 .- altitude_radius_m[1:end-1].^3
     )
+    volume_column_m3 = reshape(diagnostic_volume_m3, :, 1)
+    upward_density_m3_per_bin =
+        upward_residence_particles ./ volume_column_m3
+    downward_density_m3_per_bin =
+        downward_residence_particles ./ volume_column_m3
     density_m3_per_bin =
-        residence_particles ./ reshape(diagnostic_volume_m3, :, 1)
+        upward_density_m3_per_bin .+ downward_density_m3_per_bin
     HotOCoronaResult(
         copy(config.altitude_edges_km), copy(config.energy_edges_eV),
         density_m3_per_bin,
+        upward_density_m3_per_bin,
+        downward_density_m3_per_bin,
         copy(config.source_altitudes_km),
         source_particle_weights_s1,
         config.particles_per_source_altitude,
         primary_particles, secondary_count,
         total_source_rate_s1, stops,
     )
+end
+
+"""
+Write total, upward, and downward residence-time density diagnostics.
+
+The upward population has positive Mars-centered radial velocity and the
+downward population has negative radial velocity. Densities are in m^-3 per
+energy bin.
+"""
+function write_directional_corona_distribution(
+    path::AbstractString, result::HotOCoronaResult,
+)
+    open(path, "w") do io
+        println(
+            io,
+            "# altitude_km energy_eV total_density_m-3_per_bin ",
+            "upward_density_m-3_per_bin downward_density_m-3_per_bin",
+        )
+        for ia in axes(result.density_m3_per_bin, 1)
+            altitude = (
+                result.altitude_edges_km[ia] +
+                result.altitude_edges_km[ia + 1]
+            ) / 2
+            for ie in axes(result.density_m3_per_bin, 2)
+                energy = (
+                    result.energy_edges_eV[ie] +
+                    result.energy_edges_eV[ie + 1]
+                ) / 2
+                println(
+                    io,
+                    altitude, ' ', energy, ' ',
+                    result.density_m3_per_bin[ia, ie], ' ',
+                    result.upward_density_m3_per_bin[ia, ie], ' ',
+                    result.downward_density_m3_per_bin[ia, ie],
+                )
+            end
+        end
+    end
+    path
 end
 
 """Write a compact long-form text table for Python plotting."""
