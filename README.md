@@ -45,6 +45,14 @@ The probability density includes the solid-angle Jacobian
 * [LAB、COM、散射角和碰撞能量损失](docs/monte_carlo/HOT_O_SCATTERING_TWO_BODY_ZH.md)
 * [完整 Monte Carlo、方向通量和逃逸率](docs/monte_carlo/HOT_O_CROSSING_FLUX_AND_ESCAPE_ZH.md)
 
+English physics and calculation documentation:
+
+* [MarsHotO Monte Carlo physics model overview](docs/monte_carlo/HOT_O_COLLISION_MODEL_EN.md)
+* [Hot O collision cross sections with the neutral atmosphere](docs/monte_carlo/HOT_O_CROSS_SECTIONS_EN.md)
+* [Hot O altitude and nascent energy distributions](docs/monte_carlo/HOT_O_SOURCE_MODEL_EN.md)
+* [COM scattering angle and two body collision kinematics](docs/monte_carlo/HOT_O_SCATTERING_TWO_BODY_EN.md)
+* [Complete Monte Carlo transport, directional flux, and escape rate](docs/monte_carlo/HOT_O_CROSSING_FLUX_AND_ESCAPE_EN.md)
+
 ## Current physics
 
 The Julia package provides `transport_particle!` for direct single-particle propagation and `run_hot_o_corona` for weighted three-dimensional Monte Carlo ensembles.
