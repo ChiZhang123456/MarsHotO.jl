@@ -10,7 +10,6 @@ import numpy as np
 ROOT = Path(__file__).resolve().parents[1]
 INPUT = ROOT / "examples/output/directional_hot_o_time_snapshots.dat"
 OUTPUT = ROOT / "examples/figures/hot_o_energy_altitude_time_evolution.gif"
-PREVIEW = ROOT / "examples/figures/directional_hot_o_time_snapshots_50s.png"
 
 mpl.rcParams.update({
     "font.family": "Arial",
@@ -58,8 +57,5 @@ def update(frame: int):
 animation = FuncAnimation(figure, update, frames=times.size, interval=350, blit=False)
 OUTPUT.parent.mkdir(parents=True, exist_ok=True)
 animation.save(OUTPUT, writer=PillowWriter(fps=3), dpi=150)
-update(int(np.argmin(np.abs(times - 50))))
-figure.savefig(PREVIEW, dpi=300)
 plt.close(figure)
 print(f"animation={OUTPUT.resolve()}")
-print(f"preview={PREVIEW.resolve()}")
