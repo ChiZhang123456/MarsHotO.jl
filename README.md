@@ -92,11 +92,14 @@ Plots O2+ density, neutral/ion/electron temperatures, and hot O production rate 
 Plots normalized 300 K Maxwellian velocity-component and kinetic-energy
 probability densities together with the isotropic direction-cosine distribution.
 
-### Two opposite hot O trajectory example
+### Paired hot O reaction-event trajectory example
 
-Launch two O atoms from 180 km with exactly opposite initial velocities and
-3.495 eV per atom, record every collision, and plot their trajectories,
-energies, COM scattering angles, and collision partners:
+At 140 km, sample one weighted O2+ dissociative-recombination event from the
+local MGITM electron and ion temperatures. The two O atoms are exactly opposite
+in the sampled event COM frame, but share its generally nonzero translational
+velocity in the Mars frame. Propagate both atoms with `advance_hot_o_step!`,
+record every collision, and plot their trajectories, energies, COM scattering
+angles, and collision partners:
 
 ```bash
 julia --project=. examples/run_two_opposite_hot_o.jl
@@ -113,7 +116,7 @@ fixed-width binary event stream:
 
 ```bash
 julia --project=. examples/run_hot_o_crossing_events.jl 500 20260810 \
-  examples/output/run_1p51m_crossings/batch_01.bin
+  examples/output/run_paired_dr_10000_crossings/batch_01.bin
 ```
 
 Each event records the particle ID, parent particle ID, macroparticle rate
@@ -127,7 +130,7 @@ Calculate upward and downward radial flux directly from the crossing events:
 
 ```bash
 python examples/plot_directional_hot_o_flux.py \
-  examples/output/run_1p51m_crossings
+  examples/output/run_paired_dr_10000_crossings
 ```
 
 For crossing surface radius \(r\), energy bin \(k\), and either radial
@@ -142,12 +145,13 @@ by multiplying a residence-time density by the total particle speed. Large
 binary event files and derived numerical grids remain local under
 `examples/output/` and are not committed.
 
-Reproduce the 1.51 million primary-particle calculation as 20 statistically
-independent batches:
+Reproduce the reported calculation with 10,000 DR events at every source
+altitude, split into 20 statistically independent batches. Each event produces
+two primary O atoms, giving 3.02 million primary particles:
 
 ```bash
-julia --project=. examples/run_hot_o_crossing_ensemble.jl \
-  20 500 20260810 examples/output/run_1p51m_crossings
+julia --threads=auto --project=. examples/run_hot_o_crossing_ensemble.jl \
+  20 500 20260810 examples/output/run_paired_dr_10000_crossings
 ```
 
 Each batch represents the same physical source with an independent random
@@ -167,19 +171,25 @@ julia --project=. examples/run_hot_o_corona.jl 10000
 python examples/plot_hot_o_corona.py
 ```
 
-The first argument is the number of source particles launched at every source
-altitude. The default source grid is 100 to 250 km with 1 km spacing, so
-`10000` creates 1.51 million primary particles. At source altitude $z_i$, each
-particle carries the production-rate weight
+The first argument is the number of dissociative-recombination events generated
+at every source altitude. Each event generates two source particles. They are
+generated in pairs from individual
+O2+ dissociative-recombination events. The two O products have opposite
+velocities about the reactant center-of-mass velocity. The plasma bulk velocity
+is currently fixed at zero, while each event COM velocity is sampled from the
+electron and ion thermal velocities. The default source grid is 100 to 250 km with 1 km
+spacing, so `10000` creates 1.51 million reaction events and 3.02 million
+primary O atoms. At source altitude $z_i$, each reaction event carries the rate
+weight
 
 ```math
-w_i=\frac{Q_{\mathrm{hotO}}(z_i)V_i}{N_i}
+w_{\mathrm{event},i}=\frac{n_e n_{\mathrm{O_2^+}}k(T_e)V_i}{N_{\mathrm{event},i}}
 \quad \mathrm{s^{-1}},
 ```
 
-where $V_i$ is the spherical-shell volume and $N_i$ is the number of source
-particles at that altitude. Residence time is accumulated as
-$w_i\Delta t$ and divided by the diagnostic shell volume. The output is hot O
+where $V_i$ is the spherical-shell volume. Both product O atoms inherit the
+same event weight. Residence time is accumulated as
+$w_{\mathrm{event},i}\Delta t$ and divided by the diagnostic shell volume. The output is hot O
 density in m$^{-3}$ per energy bin, without division by the energy-bin width.
 Secondary O atoms inherit the parent particle weight.
 
@@ -292,6 +302,41 @@ julia --project=. -e "using Pkg; Pkg.test()"
 
 ![Two opposite hot O collision trajectories](examples/figures/two_opposite_hot_o_collision_trajectories.png)
 
+### Upward and downward hot O time evolution
+
+The animation shows instantaneous hot O number-density spectra from 100 to
+400 km. The left panel contains particles with positive Mars-centered radial
+velocity, and the right panel contains particles with negative radial
+velocity. It uses 10,000 dissociative-recombination events per 1 km source
+altitude, snapshots from 0 to 100 s at 5 s cadence, and a common color scale.
+The plotted quantity is $n(E,z,t)$ in cm$^{-3}$ eV$^{-1}$, not an
+altitude-crossing flux.
+
+![Directional hot O time evolution](examples/figures/hot_o_energy_altitude_time_evolution.gif)
+
+Reproduce it with:
+
+```bash
+julia --threads=auto --project=. examples/run_directional_hot_o_time_snapshots.jl 10000 20260731
+C:\Users\Win\.conda\envs\mars\python.exe examples/animate_directional_hot_o_time_snapshots.py
+```
+
+### Complete numerical outputs
+
+`examples/run_hot_o_corona.jl` now writes a compact, self-describing result
+set under `examples/output/`:
+
+- `hot_o_density_total.dat`, total residence-time density by altitude and energy
+- `hot_o_density_directional.dat`, total, upward, and downward densities
+- `hot_o_source_events.dat`, source altitude, DR event weight, event count, and primary O count
+- `hot_o_run_summary.toml`, particle counts, source rate, units, stopping statistics, and file manifest
+
+The crossing-event workflow additionally writes
+`hot_o_directional_crossing_flux.dat` and `.npz`. These contain upward,
+downward, total, and net upward steady-state crossing fluxes together with batch
+standard errors. `escape_flux_300km.json` stores the 300 km escape summary,
+and `directional_flux_metadata.json` records the normalization and run size.
+
 ### Directional hot O flux from 100 to 300 km
 
 ![Directional hot O flux from 100 to 300 km](examples/figures/hot_o_directional_flux_100_300km.png)
@@ -306,7 +351,7 @@ projected-area estimate is
 ```math
 \dot N_{\mathrm{esc,proj}}
 =\Phi_{\mathrm{esc}}\pi(R_M+300\ \mathrm{km})^2
-=(1.23163\pm0.00624)\times10^{25}\ \mathrm{s^{-1}}.
+=(1.22228\pm0.00566)\times10^{25}\ \mathrm{s^{-1}}.
 ```
 
 The small machine-readable result summary is stored in

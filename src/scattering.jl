@@ -73,4 +73,19 @@ function sample_scattering_angle(
     2asin((lower + rand(rng) * (1 - lower))^(1 / exponent))
 end
 
+"""Inverse-CDF scattering angle for an explicitly supplied uniform variate."""
+function sample_scattering_angle_from_uniform(
+    u::Real; theta_min_rad=0.0, beta=RAHMATI_DCS_BETA,
+)
+    0 <= u < 1 ||
+        throw(DomainError(u, "Scattering uniform must be in [0, 1)"))
+    0 <= theta_min_rad < pi ||
+        throw(DomainError(theta_min_rad, "Require 0 <= theta_min < pi"))
+    exponent = beta + 2
+    exponent > 0 ||
+        throw(DomainError(beta, "Angular distribution is not integrable"))
+    lower = sin(theta_min_rad / 2)^exponent
+    2asin((lower + u * (1 - lower))^(1 / exponent))
+end
+
 sample_azimuth(rng=Random.default_rng()) = 2pi * rand(rng)

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import shutil
 import struct
 from pathlib import Path
 
@@ -14,7 +15,7 @@ import numpy as np
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_RUN_DIRECTORY = (
-    ROOT / "examples" / "output" / "run_1p51m_crossings"
+    ROOT / "examples" / "output" / "run_paired_dr_crossings"
 )
 MARS_RADIUS_M = 3389.5e3
 MARS_MU_M3_S2 = 4.282837e13
@@ -108,6 +109,8 @@ def configure_matplotlib() -> None:
         {
             "font.family": "Arial",
             "mathtext.fontset": "dejavusans",
+            "svg.fonttype": "none",
+            "pdf.fonttype": 42,
             "font.size": 8,
             "axes.labelsize": 9,
             "axes.titlesize": 9,
@@ -256,22 +259,29 @@ def main() -> None:
     downward_stack = np.stack(downward_batches)
     upward_flux = np.mean(upward_stack, axis=0)
     downward_flux = np.mean(downward_stack, axis=0)
+    total_stack = upward_stack + downward_stack
+    total_flux = np.mean(total_stack, axis=0)
     upward_standard_error = np.std(
         upward_stack, axis=0, ddof=1,
     ) / np.sqrt(len(paths))
     downward_standard_error = np.std(
         downward_stack, axis=0, ddof=1,
     ) / np.sqrt(len(paths))
+    total_standard_error = np.std(
+        total_stack, axis=0, ddof=1,
+    ) / np.sqrt(len(paths))
 
     np.savez_compressed(
-        run_directory / "hot_o_directional_crossing_flux_1p51m.npz",
+        run_directory / "hot_o_directional_crossing_flux.npz",
         altitude_km=altitude_km,
         energy_eV=energy_eV,
         upward_flux_cm2_s1_per_bin=upward_flux,
         downward_flux_cm2_s1_per_bin=downward_flux,
+        total_flux_cm2_s1_per_bin=total_flux,
         net_upward_flux_cm2_s1_per_bin=upward_flux - downward_flux,
         upward_standard_error_cm2_s1_per_bin=upward_standard_error,
         downward_standard_error_cm2_s1_per_bin=downward_standard_error,
+        total_standard_error_cm2_s1_per_bin=total_standard_error,
     )
     output_table = np.column_stack(
         [
@@ -279,20 +289,24 @@ def main() -> None:
             np.tile(energy_eV, altitude_km.size),
             upward_flux.ravel(),
             downward_flux.ravel(),
+            total_flux.ravel(),
             (upward_flux - downward_flux).ravel(),
             upward_standard_error.ravel(),
             downward_standard_error.ravel(),
+            total_standard_error.ravel(),
         ]
     )
     np.savetxt(
-        run_directory / "hot_o_directional_crossing_flux_1p51m.dat",
+        run_directory / "hot_o_directional_crossing_flux.dat",
         output_table,
         header=(
             "altitude_km energy_eV upward_flux_cm-2_s-1_per_bin "
             "downward_flux_cm-2_s-1_per_bin "
+            "total_flux_cm-2_s-1_per_bin "
             "net_upward_flux_cm-2_s-1_per_bin "
             "upward_standard_error_cm-2_s-1_per_bin "
-            "downward_standard_error_cm-2_s-1_per_bin"
+            "downward_standard_error_cm-2_s-1_per_bin "
+            "total_standard_error_cm-2_s-1_per_bin"
         ),
     )
 
@@ -419,6 +433,7 @@ def main() -> None:
             xlabel="Hot O energy (eV)",
             title=title,
             ylim=(100, 300),
+            xlim=(0, 6),
         )
         axis.text(
             0.02,
@@ -438,11 +453,18 @@ def main() -> None:
         "Directional hot O flux, 100 to 300 km",
         fontsize=10,
     )
+    low_output = (
+        run_directory / "upward_downward_hot_o_crossing_flux_100_300km.png"
+    )
     low_figure.savefig(
-        run_directory
-        / "upward_downward_hot_o_crossing_flux_100_300km.png",
+        low_output,
         dpi=400,
         bbox_inches="tight",
+    )
+    shutil.copy2(
+        low_output,
+        ROOT / "examples" / "figures" /
+        "hot_o_directional_flux_100_300km.png",
     )
     plt.close(low_figure)
 
@@ -526,8 +548,10 @@ def main() -> None:
         raise RuntimeError("The directional grid does not contain 300 km")
     upward_300 = upward_flux[altitude_300_index]
     downward_300 = downward_flux[altitude_300_index]
+    total_300 = total_flux[altitude_300_index]
     upward_300_error = upward_standard_error[altitude_300_index]
     downward_300_error = downward_standard_error[altitude_300_index]
+    total_300_error = total_standard_error[altitude_300_index]
     radius_300_m = MARS_RADIUS_M + 300.0e3
     escape_energy_300_eV = (
         MARS_MU_M3_S2 * O_MASS_KG / radius_300_m / EV_J
@@ -539,12 +563,37 @@ def main() -> None:
     )
     upward_300_valid = upward_300 > 0
     downward_300_valid = downward_300 > 0
+    total_300_valid = total_300 > 0
+    spectrum_300_axis.plot(
+        energy_eV[total_300_valid],
+        total_300[total_300_valid],
+        color="#222222",
+        linewidth=2.0,
+        label="Total (upward + downward)",
+        zorder=3,
+    )
+    total_300_error_valid = (
+        total_300_valid & (total_300_error < 0.8 * total_300)
+    )
+    spectrum_300_axis.fill_between(
+        energy_eV[total_300_error_valid],
+        total_300[total_300_error_valid]
+        - total_300_error[total_300_error_valid],
+        total_300[total_300_error_valid]
+        + total_300_error[total_300_error_valid],
+        color="#555555",
+        alpha=0.14,
+        linewidth=0,
+        zorder=1,
+    )
     spectrum_300_axis.plot(
         energy_eV[upward_300_valid],
         upward_300[upward_300_valid],
         color="#2166ac",
         linewidth=1.5,
+        linestyle="--",
         label="Upward",
+        zorder=4,
     )
     upward_300_error_valid = (
         upward_300_valid & (upward_300_error < 0.8 * upward_300)
@@ -592,12 +641,13 @@ def main() -> None:
         xlabel="Hot O energy (eV)",
         ylabel=r"Flux (cm$^{-2}$ s$^{-1}$ per bin)",
         title="Directional hot O energy spectra at 300 km",
-        xlim=(energy_eV[0], energy_eV[-1]),
+        xlim=(0, 6),
     )
     positive_300_spectrum = np.concatenate(
         [
             upward_300[upward_300_valid],
             downward_300[downward_300_valid],
+            total_300[total_300_valid],
         ]
     )
     spectrum_300_axis.set_ylim(
@@ -606,11 +656,26 @@ def main() -> None:
     )
     spectrum_300_axis.grid(True, color="0.88", linewidth=0.6)
     spectrum_300_axis.legend(frameon=False)
-    spectrum_300_figure.savefig(
-        run_directory / "upward_downward_hot_o_flux_spectrum_300km.png",
-        dpi=400,
-        bbox_inches="tight",
+    spectrum_300_output = (
+        run_directory / "upward_downward_total_hot_o_flux_spectrum_300km"
     )
+    for suffix in (".png", ".pdf", ".svg"):
+        spectrum_300_figure.savefig(
+            spectrum_300_output.with_suffix(suffix),
+            dpi=600 if suffix == ".png" else None,
+            bbox_inches="tight",
+        )
+    shutil.copy2(
+        spectrum_300_output.with_suffix(".png"),
+        ROOT / "examples" / "figures" /
+        "hot_o_directional_flux_spectrum_300km.png",
+    )
+    for suffix in (".pdf", ".svg"):
+        shutil.copy2(
+            spectrum_300_output.with_suffix(suffix),
+            ROOT / "examples" / "figures" /
+            f"hot_o_directional_flux_spectrum_300km{suffix}",
+        )
     plt.close(spectrum_300_figure)
 
     upward_300_batch_total = np.sum(

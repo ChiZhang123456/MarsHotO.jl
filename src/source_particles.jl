@@ -92,19 +92,31 @@ function _weighted_index(rng, probability)
 end
 
 """
-Sample one of the two O products of O2+ dissociative recombination. Electron
-and O2+ thermal velocities, reaction branch, vibration, and isotropic product
-direction are sampled explicitly.
+Sample the paired O products of one O2+ dissociative-recombination event.
+
+Both reactants share `plasma_bulk_velocity_m_s`, which defaults to zero. The
+two products have equal macroparticle weights and opposite velocities about
+the reactant center-of-mass velocity.
 """
-function sample_hot_o_source(rng, position_m, Te_K, Ti_K, branches;
-                             vibrational_probability=[1.0],
-                             vibrational_quantum_eV=0.23,
-                             weight_s1=1.0)
+function sample_dissociative_recombination_event(
+                           rng, position_m, Te_K, Ti_K, branches;
+                           vibrational_probability=[1.0],
+                           vibrational_quantum_eV=0.23,
+                           weight_s1=1.0,
+                           plasma_bulk_velocity_m_s=(0.0, 0.0, 0.0))
     weight_s1 >= 0 ||
         throw(DomainError(weight_s1, "Particle weight must be nonnegative"))
-    # Both reactants use normalized Maxwellians with zero bulk velocity.
-    ve = sample_maxwellian_velocity(rng, Te_K, ELECTRON_MASS_KG)
-    vi = sample_maxwellian_velocity(rng, Ti_K, O2P_MASS_KG)
+    length(plasma_bulk_velocity_m_s) == 3 || throw(DimensionMismatch(
+        "Plasma bulk velocity must have three components",
+    ))
+    ve = sample_maxwellian_velocity(
+        rng, Te_K, ELECTRON_MASS_KG;
+        bulk_velocity_m_s=plasma_bulk_velocity_m_s,
+    )
+    vi = sample_maxwellian_velocity(
+        rng, Ti_K, O2P_MASS_KG;
+        bulk_velocity_m_s=plasma_bulk_velocity_m_s,
+    )
     total_mass = ELECTRON_MASS_KG + O2P_MASS_KG
     vcom = _scale(1 / total_mass,
         _add(_scale(ELECTRON_MASS_KG, ve), _scale(O2P_MASS_KG, vi)))
@@ -117,11 +129,38 @@ function sample_hot_o_source(rng, position_m, Te_K, Ti_K, branches;
                    vibrational_level * vibrational_quantum_eV
     product_speed = sqrt(available_eV * EV_J / O_MASS_KG)
     direction = _sample_isotropic_direction(rng)
-    HotOParticle(
+    product_velocity_com = _scale(product_speed, direction)
+    particle_1 = HotOParticle(
         position_m,
-        _add(vcom, _scale(product_speed, direction)),
+        _add(vcom, product_velocity_com),
         Float64(weight_s1),
         true,
         0,
     )
+    particle_2 = HotOParticle(
+        position_m,
+        _subtract(vcom, product_velocity_com),
+        Float64(weight_s1),
+        true,
+        0,
+    )
+    products = (particle_1, particle_2)
+    DissociativeRecombinationEvent(
+        Tuple(Float64.(position_m)), Float64(weight_s1), ve, vi, vcom,
+        relative_energy_eV, branch, vibrational_level, available_eV, products,
+    )
+end
+
+"""Return the paired products of one sampled reaction event."""
+function sample_hot_o_pair(rng, position_m, Te_K, Ti_K, branches; kwargs...)
+    sample_dissociative_recombination_event(
+        rng, position_m, Te_K, Ti_K, branches; kwargs...,
+    ).products
+end
+
+"""Sample one O product for low-level single-particle calculations."""
+function sample_hot_o_source(rng, position_m, Te_K, Ti_K, branches; kwargs...)
+    first(sample_hot_o_pair(
+        rng, position_m, Te_K, Ti_K, branches; kwargs...,
+    ))
 end

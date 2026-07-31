@@ -1,4 +1,4 @@
-"""Plot trajectories and collision histories for two opposite hot O atoms."""
+"""Plot a thermally sampled paired-O DR event and its trajectories."""
 
 from __future__ import annotations
 
@@ -224,8 +224,8 @@ def main() -> None:
     )
 
     figure.suptitle(
-        "Two opposite hot O atoms: gravity and neutral collisions\n"
-        r"$z_0=180$ km, $E_0=3.495$ eV per O",
+        "Paired hot O from one thermally sampled DR event\n"
+        r"$z_0=140$ km, opposite velocities in the event COM frame",
         fontsize=10,
     )
     OUTPUT.parent.mkdir(parents=True, exist_ok=True)

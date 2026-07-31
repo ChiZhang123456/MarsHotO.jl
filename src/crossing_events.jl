@@ -19,7 +19,7 @@ const EVENT_MAXIMUM_STEPS = Int8(6)
 const EVENT_MAXIMUM_PARTICLES = Int8(7)
 
 Base.@kwdef struct HotOCrossingConfig
-    particles_per_source_altitude::Int = 10_000
+    events_per_source_altitude::Int = 5_000
     seed::Int = 20260810
     minimum_energy_eV::Float64 = 0.01
     domain_minimum_altitude_km::Float64 = 100.0
@@ -56,10 +56,11 @@ end
 
 struct HotOCrossingRunResult
     event_records::Int64
+    primary_events::Int
     primary_particles::Int
     secondary_particles::Int
     total_source_rate_s1::Float64
-    source_particle_weights_s1::Vector{Float64}
+    source_event_weights_s1::Vector{Float64}
     stop_counts::Dict{Symbol,Int}
     output_path::String
 end
@@ -217,8 +218,8 @@ function run_hot_o_crossing_events(
     output_path::AbstractString,
     config::HotOCrossingConfig=HotOCrossingConfig(),
 )
-    config.particles_per_source_altitude > 0 ||
-        error("particles_per_source_altitude must be positive")
+    config.events_per_source_altitude > 0 ||
+        error("events_per_source_altitude must be positive")
     issorted(config.source_altitudes_km) ||
         error("source_altitudes_km must be sorted")
     issorted(config.crossing_altitudes_km) ||
@@ -249,19 +250,20 @@ function run_hot_o_crossing_events(
         interpolate_profile(atmosphere, altitude_m)
         for altitude_m in source_altitudes_m
     ]
-    source_q_m3_s1 = [
-        hot_o_production_rate(
+    source_event_rate_m3_s1 = [
+        dissociative_recombination_event_rate(
             state.density_m3[:e],
             state.density_m3[:O2p],
             state.Te_K,
         ) for state in source_states
     ]
-    source_rate_s1 = source_q_m3_s1 .* shell_volume_m3
-    source_particle_weights_s1 =
-        source_rate_s1 ./ config.particles_per_source_altitude
-    total_source_rate_s1 = sum(source_rate_s1)
-    primary_particles =
-        length(source_altitudes_m) * config.particles_per_source_altitude
+    source_event_rate_s1 = source_event_rate_m3_s1 .* shell_volume_m3
+    source_event_weights_s1 =
+        source_event_rate_s1 ./ config.events_per_source_altitude
+    total_source_rate_s1 = 2sum(source_event_rate_s1)
+    primary_events =
+        length(source_altitudes_m) * config.events_per_source_altitude
+    primary_particles = 2primary_events
     primary_particles <= config.maximum_total_particles ||
         error("Primary particles exceed maximum_total_particles")
     vibration_probability, vibration_quantum_eV =
@@ -278,19 +280,22 @@ function run_hot_o_crossing_events(
             altitude_m = source_altitudes_m[iz]
             position_m = (MARS_RADIUS_M + altitude_m, 0.0, 0.0)
             state = source_states[iz]
-            for _ in 1:config.particles_per_source_altitude
-                next_id += 1
-                particle = sample_hot_o_source(
+            for _ in 1:config.events_per_source_altitude
+                event = sample_dissociative_recombination_event(
                     rng, position_m, state.Te_K, state.Ti_K, branches;
                     vibrational_probability=vibration_probability,
                     vibrational_quantum_eV=vibration_quantum_eV,
-                    weight_s1=source_particle_weights_s1[iz],
+                    weight_s1=source_event_weights_s1[iz],
+                    plasma_bulk_velocity_m_s=(0.0, 0.0, 0.0),
                 )
-                tracked = _EventTrackedParticle(
-                    particle, next_id, Int64(0), 0.0, Int32(0),
-                )
-                push!(queue, tracked)
-                _write_event!(io, event_count, tracked, EVENT_BIRTH)
+                for particle in event.products
+                    next_id += 1
+                    tracked = _EventTrackedParticle(
+                        particle, next_id, Int64(0), 0.0, Int32(0),
+                    )
+                    push!(queue, tracked)
+                    _write_event!(io, event_count, tracked, EVENT_BIRTH)
+                end
             end
         end
 
@@ -334,26 +339,19 @@ function run_hot_o_crossing_events(
                     break
                 end
 
-                local_state = interpolate_profile(
-                    atmosphere, 1000 * altitude_km,
-                )
-                kappa = collision_coefficient(
-                    targets, local_state.density_m3, energy_eV,
-                )
-                mfp = kappa > 0 ? inv(kappa) : Inf
-                ds = rahmati_step_length(mfp)
                 position0 = particle.position_m
                 velocity0 = particle.velocity_m_s
-                position1, velocity1, dt = _advance_gravity(
-                    position0, velocity0, ds,
+                step = advance_hot_o_step!(
+                    rng, particle, atmosphere, targets;
+                    minimum_secondary_energy_eV=config.minimum_energy_eV,
                 )
-                particle.position_m = position1
-                particle.velocity_m_s = velocity1
-                tracked.time_s += dt
+                position1 = step.position_after_m
+                velocity1 = step.ballistic_velocity_after_m_s
+                tracked.time_s += step.dt_s
                 _write_crossings!(
                     io, event_count, tracked,
                     position0, velocity0, position1, velocity1,
-                    dt, config.crossing_altitudes_km,
+                    step.dt_s, config.crossing_altitudes_km,
                 )
 
                 altitude1_km =
@@ -376,21 +374,7 @@ function run_hot_o_crossing_events(
                     break
                 end
 
-                if kappa > 0 && rand(rng) < min(ds * kappa, 1.0)
-                    target = choose_collision_target(
-                        rng, targets, local_state.density_m3, energy_eV,
-                    )
-                    theta_com = sample_scattering_angle(rng)
-                    projectile_after, target_after = elastic_collision(
-                        particle.velocity_m_s, (0.0, 0.0, 0.0),
-                        O_MASS_KG, target.mass_kg,
-                        theta_com, sample_azimuth(rng),
-                    )
-                    particle.velocity_m_s = projectile_after
-                    particle.collisions += 1
-                    if target.species == :O &&
-                       kinetic_energy_eV(target_after) >
-                       config.minimum_energy_eV
+                if !isnothing(step.secondary)
                         if length(queue) >= config.maximum_total_particles
                             reason = :maximum_particles
                             tracked.event_index += 1
@@ -404,13 +388,7 @@ function run_hot_o_crossing_events(
                         end
                         next_id += 1
                         secondary = _EventTrackedParticle(
-                            HotOParticle(
-                                particle.position_m,
-                                target_after,
-                                particle.weight_s1,
-                                true,
-                                0,
-                            ),
+                            step.secondary,
                             next_id,
                             tracked.particle_id,
                             0.0,
@@ -421,7 +399,6 @@ function run_hot_o_crossing_events(
                         _write_event!(
                             io, event_count, secondary, EVENT_BIRTH,
                         )
-                    end
                 end
             end
             if !terminal_written
@@ -438,10 +415,11 @@ function run_hot_o_crossing_events(
         )
         HotOCrossingRunResult(
             event_count[],
+            primary_events,
             primary_particles,
             secondary_count,
             total_source_rate_s1,
-            source_particle_weights_s1,
+            source_event_weights_s1,
             stops,
             abspath(output_path),
         )

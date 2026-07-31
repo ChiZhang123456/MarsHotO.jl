@@ -1,8 +1,8 @@
 using MarsHotO
 
 const ROOT = normpath(joinpath(@__DIR__, ".."))
-const PARTICLES_PER_ALTITUDE =
-    length(ARGS) >= 1 ? parse(Int, ARGS[1]) : 10_000
+const EVENTS_PER_ALTITUDE =
+    length(ARGS) >= 1 ? parse(Int, ARGS[1]) : 5_000
 const SEED = length(ARGS) >= 2 ? parse(Int, ARGS[2]) : 20260727
 
 atmosphere = load_mgitm_subsolar_profile(
@@ -17,7 +17,7 @@ targets = load_collision_targets(joinpath(
 ))
 
 config = RahmatiMonteCarloConfig(
-    particles_per_source_altitude=PARTICLES_PER_ALTITUDE,
+    events_per_source_altitude=EVENTS_PER_ALTITUDE,
     seed=SEED,
     source_altitudes_km=collect(100.0:1.0:250.0),
     altitude_edges_km=collect(100.0:10.0:2000.0),
@@ -25,7 +25,7 @@ config = RahmatiMonteCarloConfig(
 )
 
 println(
-    "Running MarsHotO with $PARTICLES_PER_ALTITUDE particles per source ",
+    "Running MarsHotO with $EVENTS_PER_ALTITUDE DR events per source ",
     "altitude, seed=$SEED",
 )
 result = run_hot_o_corona(
@@ -36,16 +36,18 @@ result = run_hot_o_corona(
 
 output_dir = joinpath(ROOT, "examples", "output")
 mkpath(output_dir)
-output_path = joinpath(output_dir, "hot_o_altitude_energy_distribution.dat")
-write_corona_distribution(output_path, result)
+output_paths = write_corona_outputs(output_dir, result)
 
 println("Primary particles: ", result.primary_particles)
 println("Secondary particles: ", result.secondary_particles)
 println(
     "Source particle weight range: ",
-    extrema(result.source_particle_weights_s1),
+    extrema(result.source_event_weights_s1),
     " s^-1",
 )
 println("Total source rate: ", result.total_source_rate_s1, " s^-1")
 println("Stops: ", result.stop_counts)
-println("Output: ", output_path)
+println("Outputs:")
+for path in values(output_paths)
+    println("  ", path)
+end

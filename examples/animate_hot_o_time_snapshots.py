@@ -22,7 +22,7 @@ DEFAULT_OUTPUT = (
     ROOT
     / "examples"
     / "figures"
-    / "hot_o_energy_altitude_time_evolution.gif"
+    / "hot_o_energy_altitude_time_evolution_legacy_flux.gif"
 )
 MARS_RADIUS_M = 3389.5e3
 

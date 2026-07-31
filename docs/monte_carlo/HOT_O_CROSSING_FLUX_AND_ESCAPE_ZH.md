@@ -25,12 +25,13 @@ Julia 负责源粒子生成和粒子输运。Python 负责读取二进制穿越�
 | 大气剖面 | 最近日下点网格柱 |
 | 源区高度 | 100 至 250 km |
 | 源区高度间隔 | 1 km |
-| 每个批次、每个源高度的初级粒子数 | 500 |
+| 每个批次、每个源高度的 DR 事件数 | 500 |
 | 独立批次数 | 20 |
-| 初级粒子总数 | 1,510,000 |
-| 次级 O 总数 | 1,496,727 |
-| 实际追踪粒子总数 | 3,006,727 |
-| 穿越和终止事件总数 | 98,810,553 |
+| DR 事件总数 | 1,510,000 |
+| 初级 O 总数 | 3,020,000 |
+| 次级 O 总数 | 2,981,617 |
+| 实际追踪粒子总数 | 6,001,617 |
+| 穿越和终止事件总数 | 197,188,146 |
 | 计算区域 | 100 至 2000 km |
 | 记录高度面间隔 | 10 km |
 | 能量范围 | 0.01 至 7.0 eV |
@@ -72,7 +73,7 @@ Q_{\mathrm{hot\,O}}(z)
 [Q_{\mathrm{hot\,O}}]=\mathrm{m^{-3}\,s^{-1}}.
 ```
 
-### 3.2 每个宏粒子的权重
+### 3.2 每个反应事件的权重
 
 源高度为 $z_i$，对应球壳体积为
 
@@ -83,20 +84,22 @@ V_i=\frac{4\pi}{3}
 \right].
 ```
 
-该球壳中每秒产生的热 O 数量为
+该球壳中每秒发生的解离复合事件数为
 
 ```math
-\dot N_i=Q_{\mathrm{hot\,O}}(z_i)V_i.
+\dot N_{\mathrm{event},i}
+=n_e(z_i)n_{\mathrm{O_2^+}}(z_i)k[T_e(z_i)]V_i.
 ```
 
-若在该高度生成 $N_i$ 个 Monte Carlo 初级宏粒子，则每个宏粒子的权重为
+若在该高度生成 $N_{\mathrm{event},i}^{\mathrm{MC}}$ 个 Monte Carlo 反应事件，则每个事件的权重为
 
 ```math
-w_i=\frac{\dot N_i}{N_i},
-\qquad [w_i]=\mathrm{s^{-1}}.
+w_{\mathrm{event},i}
+=\frac{\dot N_{\mathrm{event},i}}{N_{\mathrm{event},i}^{\mathrm{MC}}},
+\qquad [w_{\mathrm{event},i}]=\mathrm{s^{-1}}.
 ```
 
-因此，一个模拟粒子不是一个真实 O 原子。它代表每秒产生的 $w_i$ 个真实 O 原子。次级反冲 O 继承母粒子的相同权重。
+每个模拟事件产生两个 O，二者都继承 $w_{\mathrm{event},i}$。因此两个产物的总权重正好等于真实热 O 产生率 $2\dot N_{\mathrm{event},i}$。次级反冲 O 继承母粒子的相同权重。
 
 20 个批次都是对同一个物理源的独立 Monte Carlo 估计。因此，批次结果必须取平均，不能把 20 个批次的通量直接相加。
 
@@ -120,6 +123,8 @@ f_s(\mathbf v)
 ```math
 \mathbf u_e=\mathbf u_{\mathrm{O_2^+}}=(0,0,0).
 ```
+
+体速度为零只表示 Maxwell 分布的均值为零，并不表示每次反应的 COM 速度为零。程序为每个事件分别抽样电子和 O2+ 热速度，再计算该事件自己的 COM 速度。
 
 三个速度分量彼此独立，每个分量满足
 
@@ -466,34 +471,31 @@ C:\Users\Win\.conda\envs\mars\python.exe \
 
 #### 动画
 
-下面的 GIF 使用相同的快照通量定义，显示 $t=0$ 至 $100\ \mathrm{s}$ 的演化。快照间隔为 2 s，共 51 帧，所有帧使用相同的 colorbar 范围，播放速度为每秒 10 帧。
+下面的 GIF 显示 100 至 400 km 的瞬时方向数密度谱 $n(E,z,t)$。左图为火星径向速度大于零的上行粒子，右图为径向速度小于零的下行粒子。每个 1 km 源高度使用 10,000 个解离复合事件。时间为 0 至 100 s，间隔 5 s，共 21 帧。两个面板和所有帧使用相同的 colorbar，能量显示范围为 0 至 6 eV。
 
-![热 O 高度能量快照通量动画](../../examples/figures/hot_o_energy_altitude_time_evolution.gif)
+![热 O 上行和下行高度能量数密度动画](../../examples/figures/hot_o_energy_altitude_time_evolution.gif)
 
-该动画描述一组在 $t=0$ 同时释放的初始粒子，并不表示连续注入源达到的稳态分布。先生成本地逐帧数据：
+该动画描述一组在 $t=0$ 同时释放的初始粒子，并不表示连续注入源达到的稳态分布，也不是后文的高度穿越通量。先生成方向逐帧数据：
 
 ```bash
-julia --project=. examples/run_hot_o_time_snapshots.jl \
-  1000 20260730 \
-  examples/output/hot_o_time_animation_snapshots.dat \
-  2 100
+julia --threads=auto --project=. \
+  examples/run_directional_hot_o_time_snapshots.jl 10000 20260731
 ```
 
-第 4 和第 5 个参数分别是快照时间间隔和最大快照时间，单位均为秒。然后生成 GIF：
+然后生成 GIF：
 
 ```bash
 C:\Users\Win\.conda\envs\mars\python.exe \
-  examples/animate_hot_o_time_snapshots.py \
-  examples/output/hot_o_time_animation_snapshots.dat
+  examples/animate_directional_hot_o_time_snapshots.py
 ```
 
-约 48 MB 的逐帧数据只保存在本地，不提交到 GitHub。
+逐帧数据只保存在本地 `examples/output/`，不提交到 GitHub。
 
 ## 8. 100 至 300 km 的方向通量
 
 ![100 至 300 km 热 O 方向通量](../../examples/figures/hot_o_directional_flux_100_300km.png)
 
-左图为上行通量，右图为下行通量。低高度区域碰撞频繁，因此上行和下行粒子都较多。随高度增加，下行高能粒子快速减少，而上行粒子仍保留明显的高能尾部。
+左图为上行通量，右图为下行通量。低高度区域碰撞频繁，因此上行和下行粒子都较多。随高度增加，下行高能粒子快速减少，而上行粒子仍保留明显的高能尾部。图中能量范围为 0 至 6 eV。
 
 ## 9. 300 km 能谱
 
@@ -504,7 +506,7 @@ C:\Users\Win\.conda\envs\mars\python.exe \
 ```math
 \Phi_{\mathrm{up}}
 =
-(1.49449\pm0.00506)\times10^8
+(1.47722\pm0.00337)\times10^8
 \ \mathrm{cm^{-2}\,s^{-1}}.
 ```
 
@@ -513,9 +515,21 @@ C:\Users\Win\.conda\envs\mars\python.exe \
 ```math
 \Phi_{\mathrm{down}}
 =
-(7.91631\pm0.03441)\times10^7
+(7.79193\pm0.02380)\times10^7
 \ \mathrm{cm^{-2}\,s^{-1}}.
 ```
+
+黑色曲线为双向穿越总通量：
+
+```math
+\Phi_{\mathrm{total}}
+=\Phi_{\mathrm{up}}+\Phi_{\mathrm{down}}
+=2.25641\times10^8
+\ \mathrm{cm^{-2}\,s^{-1}}.
+```
+
+该总通量不同于净上行通量
+$\Phi_{\mathrm{up}}-\Phi_{\mathrm{down}}$。
 
 ## 10. 300 km 局地逃逸能量
 
@@ -556,7 +570,7 @@ E_k\ge E_{\mathrm{esc}}
 ```math
 \Phi_{\mathrm{esc}}
 =
-(2.88003\pm0.01458)\times10^7
+(2.85816\pm0.01324)\times10^7
 \ \mathrm{cm^{-2}\,s^{-1}}.
 ```
 
@@ -589,7 +603,7 @@ A_{\mathrm{proj}}
 ```math
 \dot N_{\mathrm{up,proj}}
 =\Phi_{\mathrm{up}}A_{\mathrm{proj}}
-=6.39114\times10^{25}\ \mathrm{s^{-1}}.
+=6.31728\times10^{25}\ \mathrm{s^{-1}}.
 ```
 
 但是，低于局地逃逸能量的上行粒子仍会被火星重力束缚，不能直接计入逃逸。因此，投影面积逃逸率估计为
@@ -604,7 +618,7 @@ A_{\mathrm{proj}}
 \boxed{
 \dot N_{\mathrm{esc,proj}}
 =
-(1.23163\pm0.00624)\times10^{25}
+(1.22228\pm0.00566)\times10^{25}
 \ \mathrm{s^{-1}}
 }.
 ```
@@ -622,7 +636,7 @@ A_{\mathrm{proj}}
 ```math
 \dot N_{\mathrm{esc,global}}
 =
-(4.92653\pm0.02494)\times10^{25}
+(4.88913\pm0.02265)\times10^{25}
 \ \mathrm{s^{-1}}.
 ```
 
@@ -638,20 +652,22 @@ A_{\mathrm{proj}}
 
 ```bash
 julia --project=. examples/run_hot_o_crossing_ensemble.jl \
-  20 500 20260810 examples/output/run_1p51m_crossings
+  20 500 20260810 examples/output/run_paired_dr_10000_crossings
 ```
 
 参数依次为：
 
 1. 批次数
-2. 每个源高度、每个批次的初级粒子数
+2. 每个源高度、每个批次的 DR 事件数
 3. 第一个随机数种子
 4. 本地输出目录
 
-该设置包含 151 个源高度，因此初级粒子总数为
+该设置包含 151 个源高度，因此 DR 事件总数和初级 O 总数分别为
 
 ```math
-20\times500\times151=1{,}510{,}000.
+20\times500\times151=1{,}510{,}000\ \mathrm{events},
+\qquad
+N_{\mathrm{primary\ O}}=3{,}020{,}000.
 ```
 
 ### 13.2 计算通量并绘图
@@ -659,10 +675,10 @@ julia --project=. examples/run_hot_o_crossing_ensemble.jl \
 ```bash
 C:\Users\Win\.conda\envs\mars\python.exe \
   examples/plot_directional_hot_o_flux.py \
-  examples/output/run_1p51m_crossings
+  examples/output/run_paired_dr_10000_crossings
 ```
 
-原始二进制事件文件约为 8.7 GB，只保存在本地，不提交到 GitHub。GitHub 保存完整计算代码、固定输入、可复现命令、最终 PNG 和小型数值汇总。
+原始二进制事件文件约为 16.2 GB，只保存在本地，不提交到 GitHub。GitHub 保存完整计算代码、固定输入、可复现命令和最终图件。
 
 机器可读的 300 km 数值汇总见：
 
@@ -687,4 +703,14 @@ examples/results/hot_o_escape_flux_300km.json
 | `examples/run_hot_o_time_snapshots.jl` | 生成 0、10、50 和 100 s 的固定飞行时间快照 |
 | `examples/plot_hot_o_time_snapshots.py` | 计算面积归一化快照通量并绘制两行两列图 |
 | `examples/animate_hot_o_time_snapshots.py` | 将固定时间间隔的快照通量绘制为 GIF 动画 |
+| `examples/run_directional_hot_o_time_snapshots.jl` | 并行生成成对 DR 事件的上行和下行数密度快照 |
+| `examples/animate_directional_hot_o_time_snapshots.py` | 将方向数密度快照绘制为正式 GIF 动画 |
 | `test/runtests.jl` | Maxwell 分布、截面、散射、守恒和可重复性测试 |
+
+## 完整输出结果集
+
+稳态 O 冕计算通过 `write_corona_outputs` 自动写出总驻留时间数密度、上行和
+下行数密度、随高度变化的 DR 事件权重，以及包含粒子数、单位、源率和终止
+统计的 TOML 摘要。crossing-event 后处理自动写出上行、下行、总通量和净上行通量、
+批次标准误差、压缩 NPZ、300 km 逃逸摘要、归一化元数据和对应图片。大型
+逐粒子二进制 crossing 文件只保存在本地 `examples/output/`。

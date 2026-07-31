@@ -465,9 +465,9 @@ The source models of Rahmati and Lillis follow the same basic principles:
 1. The dissociative recombination rate determines the altitude dependent source strength.
 2. The released energy of each branch determines the main energy peaks.
 3. Reactant thermal velocities and two body reaction kinematics determine the nascent energy in the Mars stationary frame.
-4. The resulting $Q_k(z)$ becomes input to a hot atom transport model.
+4. Weighted dissociative-recombination events are generated directly at each altitude. Each event produces an O pair, and both atoms are passed separately to the single-particle transport model.
 
-MarsHotO additionally includes the specified O2+ vibrational population explicitly. The source model generates initial particles. Subsequent collisions do not modify the source term. Instead, transport converts $Q_k(z)$ into altitude, energy, and velocity distributions of the hot O corona.
+MarsHotO additionally includes the specified O2+ vibrational population explicitly. The quantities $P_k(z)$ and $Q_k(z)$ are diagnostic histograms used for plotting and source validation. They are not used to resample independent single-O energies for transport. Direct event sampling preserves the common branch, vibrational state, COM velocity, and opposite product velocities of each reaction.
 
 ## 10. Essential distinctions
 
@@ -478,22 +478,28 @@ Q_k(z)         Production rate in energy bin k, in m^-3 s^-1
 O corona       Altitude, energy, and velocity distributions after transport
 ```
 
-The chemical source model provides $Q_k(z)$. The hot O corona must be calculated with the transport Monte Carlo model.
+The chemical event sampler provides both the diagnostic $Q_k(z)$ and the paired particles that are transported directly to calculate the hot O corona.
 
 ## 11. Macroparticle weights in the transport Monte Carlo model
 
-The default source altitude grid extends from 100 to 250 km with 1 km spacing. The nominal large ensemble places
+The default source altitude grid extends from 100 to 250 km with 1 km spacing. Define the reaction-event rate as
 
 ```math
-N_i=10000
+R_{\mathrm{DR}}(z_i)=n_e(z_i)n_{\mathrm{O_2^+}}(z_i)k[T_e(z_i)].
 ```
 
-primary hot O particles at each altitude, giving
+The nominal large ensemble generates
 
 ```math
-151\times10000
+N_{\mathrm{event},i}=10000
+```
+
+reaction events at each altitude. Every event produces two primary hot O atoms, giving
+
+```math
+151\times20000
 =
-1.51\times10^6
+3.02\times10^6
 ```
 
 primary particles.
@@ -511,29 +517,21 @@ V_i
 \right].
 ```
 
-The physical rate of hot O production in that shell is
+The physical reaction-event rate in that shell is
 
 ```math
-S_i
-=
-Q_{\mathrm{hotO}}(z_i)V_i.
+S_{\mathrm{event},i}=R_{\mathrm{DR}}(z_i)V_i.
 ```
 
-The weight of one simulated particle is
+The weight of one simulated reaction event is
 
 ```math
-w_i
+w_{\mathrm{event},i}
 =
-\frac{
-Q_{\mathrm{hotO}}(z_i)V_i
-}{
-N_i
-}.
+\frac{R_{\mathrm{DR}}(z_i)V_i}{N_{\mathrm{event},i}}.
 ```
 
-The unit of $w_i$ is $\mathrm{s^{-1}}$. It is the physical number of hot O atoms produced per second represented by that simulated particle. Particles at the same source altitude have equal weights, while weights usually differ among source altitudes.
-
-Each source particle energy is sampled from the nascent energy distribution at that altitude, and its initial direction is isotropic. The particle then moves under Martian gravity and experiences stochastic collisions with the background neutral atmosphere. When the collision target is O, the recoil O is added to the queue as a secondary hot O and inherits the parent weight $w_i$.
+The unit of $w_{\mathrm{event},i}$ is $\mathrm{s^{-1}}$. Each event independently samples electron and O2+ Maxwellian velocities. Zero bulk velocity means only that the Maxwellian means are zero. The sampled reactant COM velocity of an individual event is generally nonzero. The two O products are exactly opposite in that COM frame and both inherit the same event weight. They are then transported separately. A recoil secondary O inherits the parent weight.
 
 ## 12. Deriving the hot O corona from trajectories
 

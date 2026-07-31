@@ -18,6 +18,11 @@ end
 hot_o_production_rate(ne_m3::Real, nO2p_m3::Real, Te_K::Real) =
     2ne_m3 * nO2p_m3 * dissociative_recombination_coefficient(Te_K)
 
+"""O2+ dissociative-recombination event rate, in m^-3 s^-1."""
+dissociative_recombination_event_rate(
+    ne_m3::Real, nO2p_m3::Real, Te_K::Real,
+) = ne_m3 * nO2p_m3 * dissociative_recombination_coefficient(Te_K)
+
 function load_reaction_branches(path::AbstractString)
     input = TOML.parsefile(path)
     branches = [DRBranch(
