@@ -457,6 +457,82 @@ The result is not divided by the energy bin width. It is the flux contained in e
 
 The flux is calculated separately for each of the 20 independent batches. The final curve is the batch mean. Shading in the line plot gives the standard error of the mean across the 20 batches. Shading is omitted for bins with very large relative uncertainty.
 
+### 7.1 Altitude and energy snapshots at fixed flight times
+
+In addition to steady state altitude surface crossing events, MarsHotO provides fixed flight time snapshots to examine how an initially released hot O ensemble propagates. All primary hot O particles are released simultaneously at $t=0$. Particle states are recorded at
+
+```math
+t=0,\ 10,\ 50,\ 100\ \mathrm{s}.
+```
+
+Secondary O produced by collisions is included. The birth time of a secondary O is the actual collision time and is not reset to zero.
+
+The reported snapshot calculation generates 1000 primary particles at every 1 km source altitude from 100 to 250 km, giving
+
+```math
+151\times1000
+=
+151{,}000
+```
+
+primary hot O particles. The figure uses 5 km altitude bins and 0.05 eV energy bins. Its displayed ranges are 100 to 1000 km and 0 to 7 eV.
+
+For time $t$, altitude bin $i$, and energy bin $k$, the macroparticle rate weights occupying that bin are first summed:
+
+```math
+\dot N_{ik}(t)
+=
+\sum_{p\in(i,k,t)}w_p,
+\qquad
+[\dot N_{ik}]=\mathrm{s^{-1}}.
+```
+
+This rate is divided by the spherical area at the altitude bin center:
+
+```math
+\Phi_{ik}^{\mathrm{snap}}(t)
+=
+\frac{
+\dot N_{ik}(t)
+}{
+4\pi(R_M+z_i)^2
+}.
+```
+
+The unit is
+
+```math
+\mathrm{cm^{-2}\,s^{-1}\ per\ energy\ bin}.
+```
+
+The result is not divided by the energy bin width. The color scale shows
+
+```math
+\log_{10}\Phi_{ik}^{\mathrm{snap}}.
+```
+
+![Hot O altitude and energy snapshot flux at fixed flight times](../../examples/figures/hot_o_energy_altitude_time_snapshots.png)
+
+Panels a through d show 0, 10, 50, and 100 s, respectively. The initial particles occupy 100 to 250 km. With increasing flight time, energetic particles propagate to higher altitudes and form a clear relation between altitude and energy. Altitude bins containing fewer than 20 particles are assigned the lowest color to suppress low sample noise.
+
+The quantity $\Phi_{ik}^{\mathrm{snap}}$ is the macroparticle production rate occupying an altitude bin at a fixed time, divided by spherical area. It is therefore described as a snapshot flux estimate. It is not separated into upward and downward components and is not the net radial flux through a spherical surface. Escape rates must continue to use the altitude surface crossing flux defined in Section 7.
+
+Run the snapshot calculation from the project root:
+
+```bash
+julia --project=. examples/run_hot_o_time_snapshots.jl \
+  1000 20260730 examples/output/hot_o_time_snapshots.dat
+```
+
+Then create the figure:
+
+```bash
+C:\Users\Win\.conda\envs\mars\python.exe \
+  examples/plot_hot_o_time_snapshots.py
+```
+
+The large local snapshot table remains in `examples/output/` and is not committed to GitHub. GitHub contains the simulation code, plotting code, and final PNG.
+
 ## 8. Directional flux from 100 to 300 km
 
 ![Directional hot O flux from 100 to 300 km](../../examples/figures/hot_o_directional_flux_100_300km.png)
@@ -669,4 +745,6 @@ examples/results/hot_o_escape_flux_300km.json
 | `src/crossing_events.jl` | Macroparticle queue, secondary O, and crossing events |
 | `examples/run_hot_o_crossing_ensemble.jl` | Entry point for the 20 batch Monte Carlo calculation |
 | `examples/plot_directional_hot_o_flux.py` | Event processing, flux, uncertainty, escape rate, and figures |
+| `examples/run_hot_o_time_snapshots.jl` | Generate fixed flight time snapshots at 0, 10, 50, and 100 s |
+| `examples/plot_hot_o_time_snapshots.py` | Calculate area normalized snapshot flux and create the two by two figure |
 | `test/runtests.jl` | Tests of Maxwellians, cross sections, scattering, conservation, and reproducibility |

@@ -390,6 +390,80 @@ v_r<0
 
 对 20 个独立批次分别计算 $\Phi_k$，最终曲线取批次平均。图中的阴影表示 20 个批次均值的标准误差。相对误差过大的能量格不画阴影。
 
+### 7.1 固定飞行时间的高度能量快照
+
+除了稳态高度面穿越事件，MarsHotO 还提供固定飞行时间快照，用于检查一组初始热 O 如何随时间传播。该诊断在 $t=0$ 同时释放所有初级热 O，并在
+
+```math
+t=0,\ 10,\ 50,\ 100\ \mathrm{s}
+```
+
+记录仍在计算区域内的粒子。碰撞产生的次级 O 也包括在内。次级 O 的起始时间是实际碰撞发生时间，而不是重新设为零。
+
+本次快照计算在 100 至 250 km 每隔 1 km 生成 1000 个初级粒子，共有
+
+```math
+151\times1000=151{,}000
+```
+
+个初级热 O。绘图使用 5 km 高度格和 0.05 eV 能量格，显示范围为 100 至 1000 km 和 0 至 7 eV。
+
+对于时刻 $t$、高度格 $i$ 和能量格 $k$，先累加位于该格中的宏粒子权重：
+
+```math
+\dot N_{ik}(t)
+=
+\sum_{p\in(i,k,t)}w_p,
+\qquad
+[\dot N_{ik}]=\mathrm{s^{-1}}.
+```
+
+然后除以高度格中心对应的球面积：
+
+```math
+\Phi_{ik}^{\mathrm{snap}}(t)
+=
+\frac{
+\dot N_{ik}(t)
+}{
+4\pi(R_M+z_i)^2
+}.
+```
+
+单位为
+
+```math
+\mathrm{cm^{-2}\,s^{-1}\ per\ energy\ bin}.
+```
+
+该结果不除以能量格宽度。图中颜色为
+
+```math
+\log_{10}\Phi_{ik}^{\mathrm{snap}}.
+```
+
+![固定飞行时间的热 O 高度能量快照通量](../../examples/figures/hot_o_energy_altitude_time_snapshots.png)
+
+图 a 至 d 分别对应 0、10、50 和 100 s。初始粒子位于 100 至 250 km。随飞行时间增加，高能粒子传播到更高位置，并形成明显的高度和能量相关性。为避免低样本噪声，粒子数少于 20 的高度格显示为 colorbar 的最低颜色。
+
+这里的 $\Phi_{ik}^{\mathrm{snap}}$ 是固定时刻位于高度格内的宏粒子产生率除以球面积，因此称为快照通量估计。它没有按照径向速度分为上行和下行，也不等同于穿过球面的净径向通量。逃逸率仍必须使用第 7 节定义的高度面穿越事件通量。
+
+从项目根目录运行：
+
+```bash
+julia --project=. examples/run_hot_o_time_snapshots.jl \
+  1000 20260730 examples/output/hot_o_time_snapshots.dat
+```
+
+然后绘图：
+
+```bash
+C:\Users\Win\.conda\envs\mars\python.exe \
+  examples/plot_hot_o_time_snapshots.py
+```
+
+大型本地快照数据保存在 `examples/output/`，不提交到 GitHub。GitHub 只保存模拟代码、绘图代码和最终 PNG。
+
 ## 8. 100 至 300 km 的方向通量
 
 ![100 至 300 km 热 O 方向通量](../../examples/figures/hot_o_directional_flux_100_300km.png)
@@ -585,4 +659,6 @@ examples/results/hot_o_escape_flux_300km.json
 | `src/crossing_events.jl` | 宏粒子队列、次级 O 和高度面穿越事件 |
 | `examples/run_hot_o_crossing_ensemble.jl` | 20 批次 Monte Carlo 运行入口 |
 | `examples/plot_directional_hot_o_flux.py` | 穿越事件后处理、通量、误差、逃逸率和绘图 |
+| `examples/run_hot_o_time_snapshots.jl` | 生成 0、10、50 和 100 s 的固定飞行时间快照 |
+| `examples/plot_hot_o_time_snapshots.py` | 计算面积归一化快照通量并绘制两行两列图 |
 | `test/runtests.jl` | Maxwell 分布、截面、散射、守恒和可重复性测试 |
