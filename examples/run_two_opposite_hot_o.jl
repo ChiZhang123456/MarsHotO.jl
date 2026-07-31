@@ -10,9 +10,7 @@ const COLLISION_OUTPUT = joinpath(
     OUTPUT_DIR, "two_opposite_hot_o_collisions.dat",
 )
 
-const INITIAL_ALTITUDE_KM = 180.0
-const INITIAL_ENERGY_EV = 6.99 / 2
-const INITIAL_POLAR_ANGLE_DEG = 60.0
+const INITIAL_ALTITUDE_KM = 140.0
 const RANDOM_SEED = 20260729
 const MINIMUM_ENERGY_EV = 0.01
 const MAXIMUM_ALTITUDE_KM = 500.0
@@ -78,39 +76,17 @@ function trace_particle(
             break
         end
 
-        local_state = interpolate_profile(atmosphere, altitude_m)
-        kappa_m1 = collision_coefficient(
-            targets, local_state.density_m3, energy_before_step_eV,
+        energy_before_collision_eV = energy_before_step_eV
+        step_result = advance_hot_o_step!(
+            rng, particle, atmosphere, targets;
+            minimum_secondary_energy_eV=MINIMUM_ENERGY_EV,
         )
-        mean_free_path_m = kappa_m1 > 0 ? inv(kappa_m1) : Inf
-        ds_m = rahmati_step_length(mean_free_path_m)
-        position_after, velocity_before_collision, dt_s =
-            MarsHotO._advance_gravity(
-                particle.position_m, particle.velocity_m_s, ds_m,
-            )
-        particle.position_m = position_after
-        particle.velocity_m_s = velocity_before_collision
-        elapsed_time_s += dt_s
-        path_length_km += ds_m / 1000
+        elapsed_time_s += step_result.dt_s
+        path_length_km += step_result.ds_m / 1000
 
-        collided = kappa_m1 > 0 &&
-            rand(rng) < min(ds_m * kappa_m1, 1.0)
-        if collided
-            target = choose_collision_target(
-                rng, targets, local_state.density_m3,
-                MarsHotO.kinetic_energy_eV(particle.velocity_m_s),
-            )
-            theta_com_rad = sample_scattering_angle(rng)
-            azimuth_rad = sample_azimuth(rng)
-            energy_before_collision_eV =
-                MarsHotO.kinetic_energy_eV(particle.velocity_m_s)
-            projectile_after, _ = elastic_collision(
-                particle.velocity_m_s, (0.0, 0.0, 0.0),
-                O_MASS_KG, target.mass_kg,
-                theta_com_rad, azimuth_rad,
-            )
-            particle.velocity_m_s = projectile_after
-            particle.collisions += 1
+        if !isnothing(step_result.target)
+            target = step_result.target
+            theta_com_rad = step_result.scattering_angle_com_rad
             collision_index += 1
             energy_after_collision_eV =
                 MarsHotO.kinetic_energy_eV(particle.velocity_m_s)
@@ -190,16 +166,28 @@ function main()
     targets = load_collision_targets(joinpath(
         ROOT, "data", "cross_sections", "rahmati_total_cross_sections.toml",
     ))
-
-    speed_m_s = sqrt(2INITIAL_ENERGY_EV * EV_J / O_MASS_KG)
-    polar_angle_rad = deg2rad(INITIAL_POLAR_ANGLE_DEG)
-    direction = (
-        cos(polar_angle_rad),
-        sin(polar_angle_rad),
-        0.0,
+    chemistry_path = joinpath(
+        ROOT, "data", "chemistry",
+        "o2plus_dissociative_recombination.toml",
     )
-    velocity_1 = MarsHotO._scale(speed_m_s, direction)
-    velocity_2 = MarsHotO._scale(-speed_m_s, direction)
+    branches = load_reaction_branches(chemistry_path)
+    vibration_probability, vibration_quantum_eV =
+        MarsHotO._load_vibration(chemistry_path)
+    source_state = interpolate_profile(
+        atmosphere, 1000INITIAL_ALTITUDE_KM,
+    )
+    source_position_m = (
+        MARS_RADIUS_M + 1000INITIAL_ALTITUDE_KM, 0.0, 0.0,
+    )
+    source_event = sample_dissociative_recombination_event(
+        Xoshiro(RANDOM_SEED), source_position_m,
+        source_state.Te_K, source_state.Ti_K, branches;
+        vibrational_probability=vibration_probability,
+        vibrational_quantum_eV=vibration_quantum_eV,
+        plasma_bulk_velocity_m_s=(0.0, 0.0, 0.0),
+    )
+    velocity_1 = source_event.products[1].velocity_m_s
+    velocity_2 = source_event.products[2].velocity_m_s
 
     all_trajectories = NamedTuple[]
     all_collisions = NamedTuple[]
@@ -208,7 +196,7 @@ function main()
         trajectory, collisions, reason = trace_particle(
             particle_id,
             velocity,
-            Xoshiro(RANDOM_SEED + particle_id - 1),
+            Xoshiro(RANDOM_SEED + particle_id),
             atmosphere,
             targets,
         )
@@ -226,8 +214,16 @@ function main()
         MarsHotO._scale(O_MASS_KG, velocity_2),
     )
     println("Initial altitude: ", INITIAL_ALTITUDE_KM, " km")
-    println("Initial energy per O: ", INITIAL_ENERGY_EV, " eV")
-    println("Initial speed magnitude: ", speed_m_s, " m s^-1")
+    println("Reaction branch: ", source_event.branch.products)
+    println("Vibrational level: ", source_event.vibrational_level)
+    println("Available energy: ", source_event.available_energy_eV, " eV")
+    println("Event COM velocity: ", source_event.com_velocity_m_s, " m s^-1")
+    println("Event COM speed: ", MarsHotO._norm(
+        source_event.com_velocity_m_s,
+    ), " m s^-1")
+    println("Initial O energies: ",
+        MarsHotO.kinetic_energy_eV(velocity_1), ", ",
+        MarsHotO.kinetic_energy_eV(velocity_2), " eV")
     println(
         "Initial total momentum magnitude: ",
         MarsHotO._norm(initial_momentum),

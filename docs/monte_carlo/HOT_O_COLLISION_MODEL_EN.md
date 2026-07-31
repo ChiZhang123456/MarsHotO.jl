@@ -4,7 +4,7 @@ MarsHotO consists of two coupled components, a hot O source model and a collisio
 
 ## 1. Hot O source model
 
-The source model reads $n_e$, $n_{\mathrm{O_2^+}}$, $T_e$, and $T_i$ from MGITM. It calculates the O2+ dissociative recombination production rate, samples the four reaction branches and the O2+ vibrational states, and generates the initial position, energy, and isotropic velocity direction of each hot O atom in the Mars stationary frame.
+The source model reads $n_e$, $n_{\mathrm{O_2^+}}$, $T_e$, and $T_i$ from MGITM. At every source altitude it generates weighted O2+ dissociative-recombination events. Each event samples the electron and ion thermal velocities, one reaction branch, one O2+ vibrational state, and one isotropic product axis. The two product O atoms are exactly opposite in the event COM frame and are transformed to the Mars frame using the sampled, generally nonzero COM velocity. The plasma bulk velocity is currently zero.
 
 See [Hot O altitude and nascent energy distributions](HOT_O_SOURCE_MODEL_EN.md) for details.
 
@@ -24,8 +24,11 @@ See [COM scattering angle and two body collisions](HOT_O_SCATTERING_TWO_BODY_EN.
 
 ```text
 Read the MGITM atmosphere and plasma profiles
-    -> calculate the O2+ dissociative recombination source Q_hotO(z)
-    -> sample source altitude, reaction branch, vibration, and nascent velocity
+    -> calculate the O2+ dissociative recombination event rate
+    -> generate weighted events at every source altitude
+    -> sample reactant thermal velocities, branch, vibration, and product axis
+    -> create two opposite O products in COM and transform them to the Mars frame
+    -> pass each O separately to the single-particle transport routine
     -> calculate the mean free path from neutral densities and total cross sections
     -> advance the particle under Martian gravity
     -> sample whether a collision occurs during the step
@@ -43,7 +46,7 @@ The source is represented through the spherical production rate
 4\pi r^2Q(z)\,dz.
 ```
 
-In the stratified implementation, each source altitude contains a fixed number of primary macroparticles. The rate represented by one macroparticle is the source rate of that spherical shell divided by the number of primary particles at that altitude. A secondary O atom inherits the macroparticle rate of its parent. Extending the nearest subsolar profile as a spherically symmetric atmosphere is a current model approximation.
+In the stratified implementation, each source altitude contains a fixed number of reaction events. The event weight is the physical reaction rate of that spherical shell divided by the number of simulated events at that altitude. Both product O atoms inherit this weight, and a collision-generated secondary O inherits the weight of its parent. Extending the nearest subsolar profile as a spherically symmetric atmosphere is a current model approximation.
 
 ## 5. Main inputs and code
 

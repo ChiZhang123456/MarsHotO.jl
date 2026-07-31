@@ -2,8 +2,8 @@ using MarsHotO
 using Random
 
 const ROOT = normpath(joinpath(@__DIR__, ".."))
-const PARTICLES_PER_ALTITUDE =
-    length(ARGS) >= 1 ? parse(Int, ARGS[1]) : 1000
+const EVENTS_PER_ALTITUDE =
+    length(ARGS) >= 1 ? parse(Int, ARGS[1]) : 500
 const SEED = length(ARGS) >= 2 ? parse(Int, ARGS[2]) : 20260730
 const OUTPUT_PATH = length(ARGS) >= 3 ? abspath(ARGS[3]) : joinpath(
     ROOT, "examples", "output", "hot_o_time_snapshots.dat",
@@ -67,8 +67,8 @@ function interpolate_state(position0, velocity0, position1, velocity1, fraction)
 end
 
 function main()
-    PARTICLES_PER_ALTITUDE > 0 ||
-        error("PARTICLES_PER_ALTITUDE must be positive")
+    EVENTS_PER_ALTITUDE > 0 ||
+        error("EVENTS_PER_ALTITUDE must be positive")
     atmosphere = load_mgitm_subsolar_profile(joinpath(
         ROOT, "MGITM", "MGITM_LS000_F070_150901.dat",
     ))
@@ -94,33 +94,35 @@ function main()
         interpolate_profile(atmosphere, altitude_m)
         for altitude_m in source_altitudes_m
     ]
-    source_rate_s1 = [
-        hot_o_production_rate(
+    source_event_rate_s1 = [
+        dissociative_recombination_event_rate(
             state.density_m3[:e],
             state.density_m3[:O2p],
             state.Te_K,
         ) for state in source_states
     ] .* shell_volume_m3
-    source_particle_weights_s1 =
-        source_rate_s1 ./ PARTICLES_PER_ALTITUDE
+    source_event_weights_s1 =
+        source_event_rate_s1 ./ EVENTS_PER_ALTITUDE
 
     rng = Xoshiro(SEED)
     queue = SnapshotTrackedParticle[]
-    primary_particles =
-        length(SOURCE_ALTITUDES_KM) * PARTICLES_PER_ALTITUDE
-    sizehint!(queue, min(2primary_particles, MAXIMUM_TOTAL_PARTICLES))
+    primary_events = length(SOURCE_ALTITUDES_KM) * EVENTS_PER_ALTITUDE
+    primary_particles = 2primary_events
+    sizehint!(queue, min(primary_particles, MAXIMUM_TOTAL_PARTICLES))
     for source_index in eachindex(source_altitudes_m)
         altitude_m = source_altitudes_m[source_index]
         position_m = (MARS_RADIUS_M + altitude_m, 0.0, 0.0)
         state = source_states[source_index]
-        for _ in 1:PARTICLES_PER_ALTITUDE
-            particle = sample_hot_o_source(
+        for _ in 1:EVENTS_PER_ALTITUDE
+            event = sample_dissociative_recombination_event(
                 rng, position_m, state.Te_K, state.Ti_K, branches;
                 vibrational_probability=vibration_probability,
                 vibrational_quantum_eV=vibration_quantum_eV,
-                weight_s1=source_particle_weights_s1[source_index],
+                weight_s1=source_event_weights_s1[source_index],
             )
-            push!(queue, SnapshotTrackedParticle(particle, 0.0, 1))
+            for particle in event.products
+                push!(queue, SnapshotTrackedParticle(particle, 0.0, 1))
+            end
         end
     end
 
@@ -173,23 +175,21 @@ function main()
                 break
             end
 
-            local_state = interpolate_profile(atmosphere, altitude_m)
-            kappa = collision_coefficient(
-                targets, local_state.density_m3, energy_eV,
-            )
-            mean_free_path_m = kappa > 0 ? inv(kappa) : Inf
-            ds = rahmati_step_length(mean_free_path_m)
             position0 = particle.position_m
             velocity0 = particle.velocity_m_s
             time0_s = tracked.time_s
-            position1, velocity1, dt =
-                MarsHotO._advance_gravity(position0, velocity0, ds)
-            time1_s = time0_s + dt
+            step = advance_hot_o_step!(
+                rng, particle, atmosphere, targets;
+                minimum_secondary_energy_eV=MINIMUM_ENERGY_EV,
+            )
+            position1 = step.position_after_m
+            velocity1 = step.ballistic_velocity_after_m_s
+            time1_s = time0_s + step.dt_s
 
             while tracked.next_snapshot <= length(SNAPSHOT_TIMES_S)
                 snapshot_time_s = SNAPSHOT_TIMES_S[tracked.next_snapshot]
                 snapshot_time_s <= time1_s || break
-                fraction = (snapshot_time_s - time0_s) / dt
+                fraction = (snapshot_time_s - time0_s) / step.dt_s
                 snapshot_position, snapshot_velocity = interpolate_state(
                     position0, velocity0, position1, velocity1, fraction,
                 )
@@ -201,46 +201,21 @@ function main()
                 tracked.next_snapshot += 1
             end
 
-            particle.position_m = position1
-            particle.velocity_m_s = velocity1
             tracked.time_s = time1_s
 
-            if kappa > 0 && rand(rng) < min(ds * kappa, 1.0)
-                target = choose_collision_target(
-                    rng, targets, local_state.density_m3, energy_eV,
-                )
-                theta_com = sample_scattering_angle(rng)
-                projectile_after, target_after = elastic_collision(
-                    particle.velocity_m_s, (0.0, 0.0, 0.0),
-                    O_MASS_KG, target.mass_kg,
-                    theta_com, sample_azimuth(rng),
-                )
-                particle.velocity_m_s = projectile_after
-                particle.collisions += 1
-
-                if target.species == :O &&
-                   MarsHotO.kinetic_energy_eV(target_after) >
-                   MINIMUM_ENERGY_EV
+            if !isnothing(step.secondary)
                     length(queue) < MAXIMUM_TOTAL_PARTICLES ||
                         error("Maximum particle queue size reached")
-                    secondary = HotOParticle(
-                        particle.position_m,
-                        target_after,
-                        particle.weight_s1,
-                        true,
-                        0,
-                    )
                     next_snapshot = searchsortedfirst(
                         SNAPSHOT_TIMES_S, tracked.time_s,
                     )
                     push!(
                         queue,
                         SnapshotTrackedParticle(
-                            secondary, tracked.time_s, next_snapshot,
+                            step.secondary, tracked.time_s, next_snapshot,
                         ),
                     )
                     secondary_particles += 1
-                end
             end
         end
         stop_counts[reason] = get(stop_counts, reason, 0) + 1

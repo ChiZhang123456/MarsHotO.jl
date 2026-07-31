@@ -1,11 +1,11 @@
 using MarsHotO
 
 const ROOT = normpath(joinpath(@__DIR__, ".."))
-const PARTICLES_PER_ALTITUDE =
-    length(ARGS) >= 1 ? parse(Int, ARGS[1]) : 500
+const EVENTS_PER_ALTITUDE =
+    length(ARGS) >= 1 ? parse(Int, ARGS[1]) : 250
 const SEED = length(ARGS) >= 2 ? parse(Int, ARGS[2]) : 20260810
 const OUTPUT_PATH = length(ARGS) >= 3 ? abspath(ARGS[3]) : joinpath(
-    ROOT, "examples", "output", "run_1p51m_crossings",
+    ROOT, "examples", "output", "run_paired_dr_crossings",
     "hot_o_crossing_events.bin",
 )
 
@@ -21,7 +21,7 @@ targets = load_collision_targets(joinpath(
 ))
 
 config = HotOCrossingConfig(
-    particles_per_source_altitude=PARTICLES_PER_ALTITUDE,
+    events_per_source_altitude=EVENTS_PER_ALTITUDE,
     seed=SEED,
     source_altitudes_km=collect(100.0:1.0:250.0),
     crossing_altitudes_km=collect(100.0:10.0:2000.0),
@@ -31,8 +31,8 @@ config = HotOCrossingConfig(
 
 println(
     "Running crossing-event model with ",
-    PARTICLES_PER_ALTITUDE,
-    " particles per source altitude, seed=",
+    EVENTS_PER_ALTITUDE,
+    " DR events per source altitude, seed=",
     SEED,
 )
 start_time = time()

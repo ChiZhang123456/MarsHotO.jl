@@ -2,16 +2,16 @@ using MarsHotO
 
 const ROOT = normpath(joinpath(@__DIR__, ".."))
 const BATCH_COUNT = length(ARGS) >= 1 ? parse(Int, ARGS[1]) : 20
-const PARTICLES_PER_ALTITUDE =
-    length(ARGS) >= 2 ? parse(Int, ARGS[2]) : 500
+const EVENTS_PER_ALTITUDE =
+    length(ARGS) >= 2 ? parse(Int, ARGS[2]) : 250
 const BASE_SEED = length(ARGS) >= 3 ? parse(Int, ARGS[3]) : 20260810
 const OUTPUT_DIRECTORY = length(ARGS) >= 4 ? abspath(ARGS[4]) : joinpath(
-    ROOT, "examples", "output", "run_1p51m_crossings",
+    ROOT, "examples", "output", "run_paired_dr_crossings",
 )
 
 BATCH_COUNT > 0 || error("BATCH_COUNT must be positive")
-PARTICLES_PER_ALTITUDE > 0 ||
-    error("PARTICLES_PER_ALTITUDE must be positive")
+EVENTS_PER_ALTITUDE > 0 ||
+    error("EVENTS_PER_ALTITUDE must be positive")
 
 atmosphere = load_mgitm_subsolar_profile(
     joinpath(ROOT, "MGITM", "MGITM_LS000_F070_150901.dat"),
@@ -27,12 +27,13 @@ targets = load_collision_targets(joinpath(
 ))
 
 mkpath(OUTPUT_DIRECTORY)
-total_primary = 0
-total_secondary = 0
-total_events = Int64(0)
+primary_by_batch = zeros(Int, BATCH_COUNT)
+secondary_by_batch = zeros(Int, BATCH_COUNT)
+events_by_batch = zeros(Int64, BATCH_COUNT)
 total_start_time = time()
+progress_lock = ReentrantLock()
 
-for batch_index in 1:BATCH_COUNT
+Threads.@threads :dynamic for batch_index in 1:BATCH_COUNT
     seed = BASE_SEED + batch_index - 1
     output_path = joinpath(
         OUTPUT_DIRECTORY,
@@ -42,7 +43,7 @@ for batch_index in 1:BATCH_COUNT
         "Output already exists: $output_path. Choose a new output directory.",
     )
     config = HotOCrossingConfig(
-        particles_per_source_altitude=PARTICLES_PER_ALTITUDE,
+        events_per_source_altitude=EVENTS_PER_ALTITUDE,
         seed=seed,
         source_altitudes_km=collect(100.0:1.0:250.0),
         crossing_altitudes_km=collect(100.0:10.0:2000.0),
@@ -50,11 +51,14 @@ for batch_index in 1:BATCH_COUNT
         domain_maximum_altitude_km=2000.0,
     )
 
-    println(
-        "Batch ", batch_index, "/", BATCH_COUNT,
-        ", particles per altitude=", PARTICLES_PER_ALTITUDE,
-        ", seed=", seed,
-    )
+    lock(progress_lock) do
+        println(
+            "Batch ", batch_index, "/", BATCH_COUNT,
+            ", DR events per altitude=", EVENTS_PER_ALTITUDE,
+            ", seed=", seed, ", thread=", Threads.threadid(),
+        )
+        flush(stdout)
+    end
     batch_start_time = time()
     result = run_hot_o_crossing_events(
         atmosphere, targets, branches;
@@ -62,22 +66,25 @@ for batch_index in 1:BATCH_COUNT
         output_path=output_path,
         config=config,
     )
-    total_primary += result.primary_particles
-    total_secondary += result.secondary_particles
-    total_events += result.event_records
-    println(
-        "Completed batch ", batch_index,
-        " in ", round(time() - batch_start_time; digits=1), " s",
-        ", primary=", result.primary_particles,
-        ", secondary=", result.secondary_particles,
-        ", events=", result.event_records,
-    )
+    primary_by_batch[batch_index] = result.primary_particles
+    secondary_by_batch[batch_index] = result.secondary_particles
+    events_by_batch[batch_index] = result.event_records
+    lock(progress_lock) do
+        println(
+            "Completed batch ", batch_index,
+            " in ", round(time() - batch_start_time; digits=1), " s",
+            ", primary=", result.primary_particles,
+            ", secondary=", result.secondary_particles,
+            ", events=", result.event_records,
+        )
+        flush(stdout)
+    end
 end
 
 println("All batches completed")
 println("Elapsed seconds: ", time() - total_start_time)
-println("Primary particles: ", total_primary)
-println("Secondary particles: ", total_secondary)
-println("Tracked particles: ", total_primary + total_secondary)
-println("Event records: ", total_events)
+println("Primary particles: ", sum(primary_by_batch))
+println("Secondary particles: ", sum(secondary_by_batch))
+println("Tracked particles: ", sum(primary_by_batch) + sum(secondary_by_batch))
+println("Event records: ", sum(events_by_batch))
 println("Output directory: ", OUTPUT_DIRECTORY)

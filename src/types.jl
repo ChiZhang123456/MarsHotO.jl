@@ -40,3 +40,36 @@ mutable struct HotOParticle
     alive::Bool
     collisions::Int
 end
+
+"""One weighted O2+ dissociative-recombination event and its paired products."""
+struct DissociativeRecombinationEvent
+    position_m::NTuple{3,Float64}
+    weight_s1::Float64
+    electron_velocity_m_s::NTuple{3,Float64}
+    o2p_velocity_m_s::NTuple{3,Float64}
+    com_velocity_m_s::NTuple{3,Float64}
+    relative_energy_eV::Float64
+    branch::DRBranch
+    vibrational_level::Int
+    available_energy_eV::Float64
+    products::NTuple{2,HotOParticle}
+end
+
+"""Random choices and outcome of one numerical hot O transport step."""
+struct HotOTransportStep
+    position_before_m::NTuple{3,Float64}
+    velocity_before_m_s::NTuple{3,Float64}
+    position_after_m::NTuple{3,Float64}
+    ballistic_velocity_after_m_s::NTuple{3,Float64}
+    velocity_after_m_s::NTuple{3,Float64}
+    dt_s::Float64
+    ds_m::Float64
+    collision_coefficient_m1::Float64
+    collision_uniform::Float64
+    target_uniform::Union{Nothing,Float64}
+    scattering_uniform::Union{Nothing,Float64}
+    azimuth_uniform::Union{Nothing,Float64}
+    target::Union{Nothing,CollisionTarget}
+    scattering_angle_com_rad::Union{Nothing,Float64}
+    secondary::Union{Nothing,HotOParticle}
+end

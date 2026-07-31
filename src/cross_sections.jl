@@ -25,13 +25,14 @@ function collision_coefficient(targets, density_m3, energy_eV)
         for target in targets)
 end
 
-function choose_collision_target(rng, targets, density_m3, energy_eV)
+function choose_collision_target(targets, density_m3, energy_eV, u::Real)
+    0 <= u < 1 || throw(DomainError(u, "Target uniform must be in [0, 1)"))
     weights = [get(density_m3, target.species, 0.0) *
                total_cross_section(target, energy_eV)
                for target in targets]
     total = sum(weights)
     total > 0 || return nothing
-    threshold = rand(rng) * total
+    threshold = u * total
     accumulator = 0.0
     for (target, weight) in zip(targets, weights)
         accumulator += weight
@@ -39,3 +40,7 @@ function choose_collision_target(rng, targets, density_m3, energy_eV)
     end
     last(targets)
 end
+
+
+choose_collision_target(rng, targets, density_m3, energy_eV) =
+    choose_collision_target(targets, density_m3, energy_eV, rand(rng))

@@ -177,6 +177,61 @@ end
     branches = load_reaction_branches(joinpath(
         ROOT, "data", "chemistry", "o2plus_dissociative_recombination.toml",
     ))
+    position_m = (MARS_RADIUS_M + 200e3, 0.0, 0.0)
+    pair_rng_zero = Xoshiro(917)
+    pair_rng_bulk = Xoshiro(917)
+    sampled_event = sample_dissociative_recombination_event(
+        pair_rng_zero, position_m, 1500.0, 300.0, branches;
+        weight_s1=2.5e20,
+    )
+    pair_zero = sampled_event.products
+    plasma_bulk_velocity_m_s = (125.0, -50.0, 20.0)
+    pair_bulk = sample_hot_o_pair(
+        pair_rng_bulk, position_m, 1500.0, 300.0, branches;
+        weight_s1=2.5e20,
+        plasma_bulk_velocity_m_s=plasma_bulk_velocity_m_s,
+    )
+    @test all(particle -> particle.position_m == position_m, pair_zero)
+    @test all(particle -> particle.weight_s1 == 2.5e20, pair_zero)
+    midpoint_zero = ntuple(
+        i -> (pair_zero[1].velocity_m_s[i] +
+              pair_zero[2].velocity_m_s[i]) / 2,
+        3,
+    )
+    @test collect(sampled_event.com_velocity_m_s) ≈ collect(midpoint_zero)
+    @test sum(abs2, sampled_event.com_velocity_m_s) > 0
+    reactant_momentum = ntuple(
+        i -> MarsHotO.ELECTRON_MASS_KG *
+             sampled_event.electron_velocity_m_s[i] +
+             MarsHotO.O2P_MASS_KG * sampled_event.o2p_velocity_m_s[i],
+        3,
+    )
+    product_momentum = ntuple(
+        i -> O_MASS_KG * pair_zero[1].velocity_m_s[i] +
+             O_MASS_KG * pair_zero[2].velocity_m_s[i],
+        3,
+    )
+    @test collect(product_momentum) ≈
+          collect(MarsHotO._scale(
+              2O_MASS_KG /
+              (MarsHotO.ELECTRON_MASS_KG + MarsHotO.O2P_MASS_KG),
+              reactant_momentum,
+          ))
+    @test collect(MarsHotO._subtract(
+        pair_zero[1].velocity_m_s, midpoint_zero,
+    )) ≈ -collect(MarsHotO._subtract(
+        pair_zero[2].velocity_m_s, midpoint_zero,
+    ))
+    for particle_index in 1:2
+        @test collect(MarsHotO._subtract(
+            pair_bulk[particle_index].velocity_m_s,
+            pair_zero[particle_index].velocity_m_s,
+        )) ≈ collect(plasma_bulk_velocity_m_s) atol=1e-12
+    end
+    @test_throws DimensionMismatch sample_hot_o_pair(
+        Xoshiro(1), position_m, 1500.0, 300.0, branches;
+        plasma_bulk_velocity_m_s=(0.0, 0.0),
+    )
     targets = load_collision_targets(joinpath(
         ROOT, "data", "cross_sections", "rahmati_total_cross_sections.toml",
     ))
@@ -187,6 +242,16 @@ end
     )
     @test source.weight_s1 == 2.5e20
     @test sum(abs2, source.velocity_m_s) > 0
+    source_copy = deepcopy(source)
+    step_1 = advance_hot_o_step!(
+        Xoshiro(44), source, profile, targets; step_m=100.0,
+    )
+    step_2 = advance_hot_o_step!(
+        Xoshiro(44), source_copy, profile, targets; step_m=100.0,
+    )
+    @test step_1 == step_2
+    @test source.position_m == source_copy.position_m
+    @test source.velocity_m_s == source_copy.velocity_m_s
     result = transport_particle!(
         rng, source, profile, targets; max_steps=10, step_m=100.0,
     )
@@ -196,7 +261,7 @@ end
     @test rahmati_step_length(5_000.0) == 500.0
     @test rahmati_step_length(10_000.0) == 1000.0
     corona_config = RahmatiMonteCarloConfig(
-        particles_per_source_altitude=10,
+        events_per_source_altitude=5,
         source_altitudes_km=[150.0, 160.0],
         seed=73,
         maximum_altitude_m=260e3,
@@ -204,6 +269,7 @@ end
         maximum_total_particles=10_000,
         altitude_edges_km=collect(100.0:10.0:260.0),
         energy_edges_eV=collect(range(0.01, 7.0; length=29)),
+        show_progress=false,
     )
     corona = run_hot_o_corona(
         profile, targets, branches;
@@ -214,10 +280,11 @@ end
         config=corona_config,
     )
     @test corona.primary_particles == 20
-    @test corona.particles_per_source_altitude == 10
+    @test corona.primary_events == 10
+    @test corona.events_per_source_altitude == 5
     @test corona.source_altitudes_km == [150.0, 160.0]
-    @test all(corona.source_particle_weights_s1 .> 0)
-    @test sum(corona.source_particle_weights_s1) * 10 ≈
+    @test all(corona.source_event_weights_s1 .> 0)
+    @test sum(corona.source_event_weights_s1) * 5 * 2 ≈
           corona.total_source_rate_s1
     @test all(corona.density_m3_per_bin .>= 0)
     @test all(corona.upward_density_m3_per_bin .>= 0)
@@ -226,7 +293,15 @@ end
           corona.upward_density_m3_per_bin .+
           corona.downward_density_m3_per_bin
     @test sum(corona.density_m3_per_bin) > 0
-
+    output_paths = write_corona_outputs(mktempdir(), corona)
+    @test all(isfile, values(output_paths))
+    @test occursin(
+        "upward_density_m-3_per_bin",
+        read(output_paths.directional_density, String),
+    )
+    summary_text = read(output_paths.summary, String)
+    @test occursin("primary_events = 10", summary_text)
+    @test occursin("spherical_atmosphere_approximation = true", summary_text)
     source_altitudes_m = 1000 .* corona.source_altitudes_km
     source_edges_m = MarsHotO._shell_edges_m(source_altitudes_m)
     source_shell_volume_m3 = (4pi / 3) .* (
@@ -235,11 +310,11 @@ end
     )
     for i in eachindex(source_altitudes_m)
         state = interpolate_profile(profile, source_altitudes_m[i])
-        expected_weight_s1 = hot_o_production_rate(
+        expected_weight_s1 = dissociative_recombination_event_rate(
             state.density_m3[:e], state.density_m3[:O2p], state.Te_K,
         ) * source_shell_volume_m3[i] /
-            corona.particles_per_source_altitude
-        @test corona.source_particle_weights_s1[i] ≈ expected_weight_s1
+            corona.events_per_source_altitude
+        @test corona.source_event_weights_s1[i] ≈ expected_weight_s1
     end
 
     corona_repeat = run_hot_o_corona(
@@ -250,8 +325,8 @@ end
         ),
         config=corona_config,
     )
-    @test corona_repeat.source_particle_weights_s1 ==
-          corona.source_particle_weights_s1
+    @test corona_repeat.source_event_weights_s1 ==
+          corona.source_event_weights_s1
     @test corona_repeat.density_m3_per_bin == corona.density_m3_per_bin
     @test corona_repeat.upward_density_m3_per_bin ==
           corona.upward_density_m3_per_bin
@@ -261,7 +336,7 @@ end
 
     crossing_path = tempname() * ".bin"
     crossing_config = HotOCrossingConfig(
-        particles_per_source_altitude=2,
+        events_per_source_altitude=1,
         source_altitudes_km=[150.0, 160.0],
         crossing_altitudes_km=collect(100.0:10.0:200.0),
         domain_minimum_altitude_km=100.0,
@@ -280,6 +355,7 @@ end
         config=crossing_config,
     )
     @test crossing_result.primary_particles == 4
+    @test crossing_result.primary_events == 2
     @test crossing_result.event_records > crossing_result.primary_particles
     @test sizeof(HotOEventRecord) == 88
     open(crossing_path, "r") do io
