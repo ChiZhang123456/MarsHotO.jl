@@ -5,7 +5,6 @@ import argparse
 
 import matplotlib as mpl
 import matplotlib.pyplot as plt
-from matplotlib.animation import FuncAnimation, PillowWriter
 import numpy as np
 
 from plot_directional_hot_o_flux import (
@@ -130,7 +129,7 @@ def log_values(values: np.ndarray, vmin: float) -> np.ndarray:
 def draw_static(
     upward: np.ndarray, downward: np.ndarray, output_base: Path,
 ) -> None:
-    selected_times = (0.0, 50.0, 100.0)
+    selected_times = (5.0, 50.0, 100.0)
     indices = [int(np.where(TIMES_S == value)[0][0]) for value in selected_times]
     vmin, vmax = color_limits(upward, downward)
     figure, axes = plt.subplots(
@@ -175,51 +174,6 @@ def draw_static(
     figure.savefig(output_base.with_suffix(".png"), dpi=400)
     figure.savefig(output_base.with_suffix(".pdf"))
     figure.savefig(output_base.with_suffix(".svg"))
-    plt.close(figure)
-
-
-def draw_animation(
-    upward: np.ndarray, downward: np.ndarray, output: Path,
-) -> None:
-    vmin, vmax = color_limits(upward, downward)
-    figure, axes = plt.subplots(
-        1, 2, figsize=(9.5, 4.4), sharex=True, sharey=True,
-        constrained_layout=True,
-    )
-    images = []
-    for axis, values, direction in zip(
-        axes, (upward, downward), ("Upward", "Downward")
-    ):
-        image = axis.imshow(
-            log_values(values[0], vmin), origin="lower", aspect="auto",
-            extent=(0, 6, 100, 300), interpolation="bilinear",
-            cmap="magma", vmin=vmin, vmax=vmax, animated=True,
-        )
-        axis.set(
-            xlabel="Hot O energy (eV)", ylabel="Altitude (km)",
-            title=direction,
-        )
-        images.append(image)
-    colorbar = figure.colorbar(images[0], ax=axes, pad=0.02)
-    colorbar.set_label(
-        r"$\log_{10}[\Phi_k(E,z;\tau\leq t)]$ "
-        r"(cm$^{-2}$ s$^{-1}$ per bin)"
-    )
-    title = figure.suptitle("")
-
-    def update(frame: int):
-        images[0].set_data(log_values(upward[frame], vmin))
-        images[1].set_data(log_values(downward[frame], vmin))
-        title.set_text(
-            "Cumulative contribution to steady-state directional flux\n"
-            rf"particle flight age $\tau\leq {TIMES_S[frame]:g}$ s"
-        )
-        return (*images, title)
-
-    animation = FuncAnimation(
-        figure, update, frames=TIMES_S.size, interval=350, blit=False,
-    )
-    animation.save(output, writer=PillowWriter(fps=3), dpi=150)
     plt.close(figure)
 
 
@@ -273,11 +227,7 @@ def main() -> None:
         upward, downward,
         figure_dir / "hot_o_directional_crossing_flux_time_panels",
     )
-    draw_animation(
-        upward, downward,
-        figure_dir / "hot_o_directional_crossing_flux_time_evolution.gif",
-    )
-    print("completed directional crossing-flux time evolution")
+    print("completed directional crossing-flux time panels")
 
 
 if __name__ == "__main__":
