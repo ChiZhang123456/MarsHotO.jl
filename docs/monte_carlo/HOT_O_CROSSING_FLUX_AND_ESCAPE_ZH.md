@@ -464,6 +464,31 @@ C:\Users\Win\.conda\envs\mars\python.exe \
 
 大型本地快照数据保存在 `examples/output/`，不提交到 GitHub。GitHub 只保存模拟代码、绘图代码和最终 PNG。
 
+#### 动画
+
+下面的 GIF 使用相同的快照通量定义，显示 $t=0$ 至 $100\ \mathrm{s}$ 的演化。快照间隔为 2 s，共 51 帧，所有帧使用相同的 colorbar 范围，播放速度为每秒 10 帧。
+
+![热 O 高度能量快照通量动画](../../examples/figures/hot_o_energy_altitude_time_evolution.gif)
+
+该动画描述一组在 $t=0$ 同时释放的初始粒子，并不表示连续注入源达到的稳态分布。先生成本地逐帧数据：
+
+```bash
+julia --project=. examples/run_hot_o_time_snapshots.jl \
+  1000 20260730 \
+  examples/output/hot_o_time_animation_snapshots.dat \
+  2 100
+```
+
+第 4 和第 5 个参数分别是快照时间间隔和最大快照时间，单位均为秒。然后生成 GIF：
+
+```bash
+C:\Users\Win\.conda\envs\mars\python.exe \
+  examples/animate_hot_o_time_snapshots.py \
+  examples/output/hot_o_time_animation_snapshots.dat
+```
+
+约 48 MB 的逐帧数据只保存在本地，不提交到 GitHub。
+
 ## 8. 100 至 300 km 的方向通量
 
 ![100 至 300 km 热 O 方向通量](../../examples/figures/hot_o_directional_flux_100_300km.png)
@@ -661,4 +686,5 @@ examples/results/hot_o_escape_flux_300km.json
 | `examples/plot_directional_hot_o_flux.py` | 穿越事件后处理、通量、误差、逃逸率和绘图 |
 | `examples/run_hot_o_time_snapshots.jl` | 生成 0、10、50 和 100 s 的固定飞行时间快照 |
 | `examples/plot_hot_o_time_snapshots.py` | 计算面积归一化快照通量并绘制两行两列图 |
+| `examples/animate_hot_o_time_snapshots.py` | 将固定时间间隔的快照通量绘制为 GIF 动画 |
 | `test/runtests.jl` | Maxwell 分布、截面、散射、守恒和可重复性测试 |

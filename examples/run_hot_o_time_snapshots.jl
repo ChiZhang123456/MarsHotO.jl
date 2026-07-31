@@ -9,7 +9,17 @@ const OUTPUT_PATH = length(ARGS) >= 3 ? abspath(ARGS[3]) : joinpath(
     ROOT, "examples", "output", "hot_o_time_snapshots.dat",
 )
 
-const SNAPSHOT_TIMES_S = [0.0, 10.0, 50.0, 100.0]
+const SNAPSHOT_INTERVAL_S =
+    length(ARGS) >= 4 ? parse(Float64, ARGS[4]) : nothing
+const MAXIMUM_SNAPSHOT_TIME_S =
+    length(ARGS) >= 5 ? parse(Float64, ARGS[5]) : 100.0
+const SNAPSHOT_TIMES_S = if isnothing(SNAPSHOT_INTERVAL_S)
+    [0.0, 10.0, 50.0, 100.0]
+else
+    SNAPSHOT_INTERVAL_S > 0 ||
+        error("SNAPSHOT_INTERVAL_S must be positive")
+    collect(0.0:SNAPSHOT_INTERVAL_S:MAXIMUM_SNAPSHOT_TIME_S)
+end
 const SOURCE_ALTITUDES_KM = collect(100.0:1.0:250.0)
 const ALTITUDE_EDGES_KM = collect(100.0:5.0:1000.0)
 const ENERGY_EDGES_EV = collect(0.0:0.05:7.0)
